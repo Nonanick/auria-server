@@ -1,0 +1,28 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "F:\\aurialibv2"
+		}
+	],
+	"settings": {
+		"editor.wordWrap": "on",
+		"files.exclude": {
+			"**/.DS_Store": true,
+			"**/.git": true,
+			"**/.hg": true,
+			"**/.svn": true,
+			"**/*.css": {
+				"when": "$(basename).less"
+			},
+			"**/*.js": {
+				"when": "$(basename).ts"
+			},
+			"**/*.js.map": true,
+			"**/CVS": true,
+			"**/node_modules/*.*": true
+		}
+	}
+}
