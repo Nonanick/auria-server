@@ -9,7 +9,6 @@ import { DataPermission } from "./permission/DataPermission";
 import * as jwt from 'jsonwebtoken';
 import { AuthConfig } from "../../config/Auth";
 
-
 export class SystemUser extends User {
 
     public static COOKIE_USERNAME = "AURIA_UA_USERNAME";
@@ -31,7 +30,7 @@ export class SystemUser extends User {
      * System Name
      * ------------
      * 
-     * In which systemdid this user logged in 
+     * In which system did this user logged in 
      */
     protected systemName: string;
 
@@ -244,19 +243,20 @@ export class SystemUser extends User {
     }
 
     private async queryForUserRoles() {
-        return Promise.resolve().then(_ => {
-            let conn = this.system.getSystemConnection();
+        return Promise.resolve()
+            .then(_ => {
+                let conn = this.system.getSystemConnection();
 
-            return conn.query(
-                "SELECT \
+                return conn.query(
+                    "SELECT \
                     user_roles._id as hire_id, user_roles.role_id, user_roles.description as hire_description, \
                     role.name, role.title as role_title, role.description as role_description, role.icon \
                     FROM user_roles \
                     LEFT JOIN role \
                     ON role._id = user_roles.role_id  \
                     WHERE username=? ",
-                [this.username]);
-        });
+                    [this.username]);
+            });
     }
 
     private async buildUserRolesFromQueryResult(res: any) {
@@ -300,7 +300,7 @@ export class SystemUser extends User {
         return conn.query(accessRolesQuery, [rolesId]);
     }
 
-    private async buildUserAcessibleRowsFromQuery(queryResult: any): Promise<[UserRole[], UserRole[]]> {
+    private async buildUserAcessibleRolesFromQuery(queryResult: any): Promise<[UserRole[], UserRole[]]> {
         return Promise.resolve()
             .then(
                 () => {
@@ -343,7 +343,7 @@ export class SystemUser extends User {
                 // # Query for user acessible roles that are acessible through hierarchy! 
                 .then(this.queryForUserAcessibleRoles.bind(this))
                 // # Build and return acessible rows with user rows
-                .then(this.buildUserAcessibleRowsFromQuery.bind(this));
+                .then(this.buildUserAcessibleRolesFromQuery.bind(this));
 
             this.buildUserRolesPromise.catch((err) => {
                 console.error("[SystemUser] Build user roles failed! " + err);
@@ -625,8 +625,6 @@ export class SystemUser extends User {
         this.accessLevel = SystemUserPrivilege.GUEST;
         this.canAccessRoles = [];
 
-
-
     }
 
 }
@@ -686,3 +684,5 @@ export type LoginPayload = {
     ip: string;
     loginTime: number;
 };
+
+export type UserAutheticators = "password" | "cookie" | "jwt";

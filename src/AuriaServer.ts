@@ -4,10 +4,11 @@ import { System } from './kernel/System';
 import { AuriaResponse } from './kernel/http/AuriaResponse';
 import { AuriaRequest } from './kernel/http/AuriaRequest';
 import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable';
+import { SystemRequest } from './kernel/http/request/SystemRequest';
 
 export type AuriaServerStatus = "online" | "offline" | "maintenance";
 
-export const Auria_ENV : "development" | "prod" = "development";
+export const Auria_ENV: "development" | "prod" = "development";
 
 export class AuriaServer {
 
@@ -76,13 +77,6 @@ export class AuriaServer {
                     let canAccess = accessManager.canAccessRequest(aReq);
 
                     if (canAccess) {
-                        /*
-                                                aRes.addToResponse({
-                                                    auria_server_version: this.serverSessionId,
-                                                    auria_processedRequest: aReq.digestUrl(),
-                                                    auria_requestBody: aReq.getBody()
-                                                });
-                        */
 
                         let action = accessManager.getListenerAction();
 
@@ -127,13 +121,23 @@ export class AuriaServer {
         this.serverSessionId = Math.round(Math.random() * 10000000);
 
         console.log("[Auria Server] Initializing Systems...");
-        
+
         this.addSystem(
             new AuriaCoreSystem(this)
         );
 
         console.log("[Auria Server] Server Instance Token: " + this.serverSessionId);
 
+    }
+
+    private generateSystemRequest(request: Request, system: System): SystemRequest {
+
+        let sysRequest: SystemRequest = Object.assign(request, {
+            getSystem: () => { return system },
+            getSystemName: () => { return system.name }
+        });
+
+        return sysRequest;
     }
 
     /**

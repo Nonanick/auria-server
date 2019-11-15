@@ -6,15 +6,13 @@ import { ModuleManager } from "./module/ModuleManager";
 import { Module } from "./module/Module";
 import { AuthModule } from "./module/AuthModule/AuthModule";
 import { Translator } from "./i18n/Translator";
-import { DataAccessManager } from "./security/data/DataAccessManager";
-import { Table } from "./database/structure/table/Table";
 import { MysqlConnection } from "./database/connection/MysqlConnection";
 import { DataType } from "./database/structure/dataType/DataType";
 import { DataTypeRepository } from "./database/structure/dataType/DataTypeRepository";
+import { DataSteward } from "aurialib2";
 
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
-
 
 export abstract class System {
 
@@ -41,27 +39,6 @@ export abstract class System {
      */
     protected server: AuriaServer;
 
-
-    /**
-     * Data Access
-     * ------------
-     * 
-     * Concentrates Data Manipulation,
-     * responsible for fetching, updating and deleting
-     * data 
-     */
-    protected dataAccess : DataAccessManager;
-
-    /**
-     * Table: Data Access
-     * -------------------
-     * 
-     * Returns the table used to retrieve data permission
-     * 
-     */
-    protected dataAccessTable : Table;
-
-
     /**
      * Module manager
      * 
@@ -85,6 +62,13 @@ export abstract class System {
     protected connection: MysqlConnection;
 
     /**
+     * Data Steward
+     * -------------
+     * 
+     */
+    protected dataSteward : DataSteward;
+
+    /**
      * Translations
      * 
      * Hold all the loaded translations from this server
@@ -98,14 +82,10 @@ export abstract class System {
         this.server = server;
 
         console.log("[System] Creating new system: ", name);
+
         this.connection = this.buildSystemConnection();
 
         this.translator = new Translator(this);
-
-        this.dataAccessTable = new Table(this,"Auria.DataPermission");
-
-        this.dataAccess = new DataAccessManager(this, this.dataAccessTable);
-
         this.moduleManager = new ModuleManager(this);
         
         // If ENV == "development", systemversion does not change!
@@ -125,10 +105,6 @@ export abstract class System {
             // # - System related functions Module
             new SystemModule(this)
         );
-    }
-
-    public getDataAccessTable() : Table {
-        return this.dataAccessTable;
     }
 
     public getDataType(name : string) : DataType {
@@ -233,10 +209,6 @@ export abstract class System {
     public removeUser(username: string) {
         return this.users.delete(username);
 
-    }
-
-    public getData() : DataAccessManager {
-        return this.dataAccess;
     }
 
     public getConnection(connId : number) {

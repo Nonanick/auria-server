@@ -139,6 +139,7 @@ export class AuriaRequest {
     public getActionName(): string {
         return this.action;
     }
+    
     public getUser(): SystemUser {
         return this.user;
     }
