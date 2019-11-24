@@ -3,11 +3,12 @@ import { SystemUser } from "./security/SystemUser";
 import { AuriaServer } from "../AuriaServer";
 import { ModuleManager } from "./module/ModuleManager";
 import { Module } from "./module/Module";
-import { Translator } from "./i18n/Translator";
-import { DataAccessManager } from "./security/data/DataAccessManager";
-import { Table } from "./database/structure/table/Table";
 import { MysqlConnection } from "./database/connection/MysqlConnection";
 import { DataType } from "./database/structure/dataType/DataType";
+import { DataSteward } from "aurialib2";
+import { SystemRequest } from "./http/request/SystemRequest";
+import { Response, NextFunction } from "express-serve-static-core";
+import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
 export declare const DEFAULT_LANG = "en";
 export declare const DEFAULT_LANG_VARIATION = "us";
 export declare abstract class System {
@@ -31,23 +32,6 @@ export declare abstract class System {
      */
     protected server: AuriaServer;
     /**
-     * Data Access
-     * ------------
-     *
-     * Concentrates Data Manipulation,
-     * responsible for fetching, updating and deleting
-     * data
-     */
-    protected dataAccess: DataAccessManager;
-    /**
-     * Table: Data Access
-     * -------------------
-     *
-     * Returns the table used to retrieve data permission
-     *
-     */
-    protected dataAccessTable: Table;
-    /**
      * Module manager
      *
      * Hold all the modules from this system merging database parameters
@@ -55,17 +39,17 @@ export declare abstract class System {
      */
     protected moduleManager: ModuleManager;
     /**
-     * Translator
-     *
-     *
-     */
-    protected translator: Translator;
-    /**
      * System connection
-     *
+     * ------------------
      *
      */
     protected connection: MysqlConnection;
+    /**
+     * Data Steward
+     * -------------
+     *
+     */
+    protected dataSteward: DataSteward;
     /**
      * Translations
      *
@@ -75,13 +59,7 @@ export declare abstract class System {
         [langVariation: string]: any;
     };
     constructor(server: AuriaServer, name: string);
-    getDataAccessTable(): Table;
     getDataType(name: string): DataType;
-    /**
-     * Get the system translator
-     *
-     */
-    getTranslator(): Translator;
     /**
      * Build all modules from this system
      *
@@ -105,6 +83,7 @@ export declare abstract class System {
      * Public access to this system access manager
      */
     abstract getSystemAccessManager(): AccessManager;
+    abstract getAuthenticator(): SystemAuthenticator;
     addUser(user: SystemUser): System;
     getSystemVersion(): number;
     getServer(): AuriaServer;
@@ -112,15 +91,8 @@ export declare abstract class System {
     addModule(...module: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
-    /**
-     * Alias o getTranslator().translateText()
-     *
-     * @param langVar Language + Variation concatenated as a string
-     * @param text
-     */
-    translate(langVar: string, text: string): string;
     getUser(username: string): SystemUser | null;
     removeUser(username: string): boolean;
-    getData(): DataAccessManager;
     getConnection(connId: number): void;
+    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<void>;
 }

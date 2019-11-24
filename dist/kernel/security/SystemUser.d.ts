@@ -1,11 +1,10 @@
-/// <reference types="node" />
 import { Table } from "../database/structure/table/Table";
 import { System } from "../System";
 import { AuriaRequest } from "../http/AuriaRequest";
 import { UserRole } from "./UserRole";
-import { EventEmitter } from "events";
+import { User } from "aurialib2";
 import { DataPermission } from "./permission/DataPermission";
-export declare class SystemUser extends EventEmitter {
+export declare class SystemUser extends User {
     static COOKIE_USERNAME: string;
     static COOKIE_HANDSHAKE: string;
     static SESSION_EXPIRE_TIME: number;
@@ -21,7 +20,7 @@ export declare class SystemUser extends EventEmitter {
      * System Name
      * ------------
      *
-     * In which systemdid this user logged in
+     * In which system did this user logged in
      */
     protected systemName: string;
     /**
@@ -139,7 +138,7 @@ export declare class SystemUser extends EventEmitter {
     private queryForUserRoles;
     private buildUserRolesFromQueryResult;
     private queryForUserAcessibleRoles;
-    private buildUserAcessibleRowsFromQuery;
+    private buildUserAcessibleRolesFromQuery;
     private buildUserRoles;
     setUserAgent(userAgent: string): this;
     setIp(ip: string): this;
@@ -225,4 +224,5 @@ export declare type LoginPayload = {
     ip: string;
     loginTime: number;
 };
+export declare type UserAutheticators = "password" | "cookie" | "jwt";
 export {};

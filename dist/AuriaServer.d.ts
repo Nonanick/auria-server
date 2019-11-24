@@ -1,9 +1,12 @@
 import { Express } from 'express-serve-static-core';
 import { System } from './kernel/System';
 export declare type AuriaServerStatus = "online" | "offline" | "maintenance";
-export declare const Auria_ENV: "development" | "prod";
+export declare const Auria_ENV: "development" | "production ";
 export declare class AuriaServer {
     /**
+     * App
+     * ------
+     *
      * Express server instance
      */
     private app;
@@ -32,6 +35,7 @@ export declare class AuriaServer {
      */
     private requestHandler;
     constructor(app: Express);
+    private initializeExpressApp;
     /**
      * Add a System to this server
      *

@@ -1,4 +1,4 @@
-import { Model } from "../../../model/Model";
+import { Model } from "aurialib2";
 import { Table } from "../table/Table";
 import { RowObject } from "./RowObject";
 import { ObjectRepository } from "../../object/ObjectRepository";

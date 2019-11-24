@@ -87,28 +87,16 @@ export declare abstract class Module {
      */
     getSystem(): System;
     /**
-     * Return the translated title of this module
-     *
-     * @param langVar
-     */
-    getTitle(langVar?: string): string;
-    /**
-     * Return the translated description of this module
-     *
-     * @param langVar
-     */
-    getDescription(langVar?: string): string;
-    /**
      * Module: Data Permission
      * ---------------------------
      *
-     * Inform what data permissions thismodule
+     * Inform what data permissions this module
      *
      */
     getModuleDataPermissions(): {
         [tableName: string]: string[];
     };
-    getTable(user: SystemUser, table: string): Promise<import("../database/structure/table/Table").Table>;
+    getTable(user: SystemUser, table: string): void;
     protected abstract loadTranslations(): TranslationsByLang;
     getTranslations(): TranslationsByLang;
 }

@@ -3,7 +3,7 @@ import { Column } from "../column/Column";
 import { System } from "../../../System";
 import { TableDataQuery } from "../../dataQuery/TableDataQuery";
 import { SystemUser } from "../../../security/SystemUser";
-import { Model } from "../../../model/Model";
+import { Model } from "aurialib2";
 import { RowModel } from "../rowModel/RowModel";
 import { TableAction } from "./TableAction";
 export declare class Table extends KernelEntity {
@@ -108,8 +108,8 @@ export declare class Table extends KernelEntity {
     constructor(system: System, name: string);
     getColumns(): Promise<Map<string, Column>>;
     buildColumns(): Promise<Map<string, Column>>;
-    getTitle(langVar?: string): string;
-    getDescription(langVar?: string): string;
+    getTitle(langVar?: string): any;
+    getDescription(langVar?: string): any;
     getName(): string;
     getSystem(): System;
     /**

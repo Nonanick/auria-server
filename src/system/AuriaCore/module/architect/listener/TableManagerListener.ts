@@ -5,7 +5,6 @@ import { AuriaMiddleware } from "../../../../../kernel/http/AuriaMiddleware";
 import { Table } from "../../../../../kernel/database/structure/table/Table";
 import { AuriaConnection } from "../../../../../kernel/database/connection/AuriaConnection";
 import { SystemUser } from "../../../../../kernel/security/SystemUser";
-import { RowModel } from "../../../../../kernel/database/structure/rowModel/RowModel";
 import { AuriaArchitect } from "../AuriaArchitect";
 import { DatabaseSychronizer } from "../databaseManipulation/DatabaseSynchronizer";
 
@@ -28,7 +27,7 @@ export class TableManagerListener extends ModuleListener {
         return {
             "list": {},
             "databaseSync": {},
-            "situation" : {},
+            "situation": {},
         };
     }
 
@@ -70,7 +69,7 @@ export class TableManagerListener extends ModuleListener {
 
         this.module
             .getTable(user, tableName)
-            .then(async table => {
+            .then(async (table: Table) => {
                 let conn = table.getConnection();
                 await table.buildColumns();
                 return [table, await this.fetchTableDescription(conn, table.table)];
@@ -83,7 +82,7 @@ export class TableManagerListener extends ModuleListener {
 
                 res.send();
             })
-            .catch(err => {
+            .catch((err: any) => {
                 console.error("[Architect.TableManager] Failed to fetch table from parameter!", err);
                 res.error("", "User can't access this table!");
             });
@@ -104,6 +103,8 @@ export class TableManagerListener extends ModuleListener {
     }
 
     private async createColumnFromComparisson(user: SystemUser, table: Table, comparisson: ColumnComparisson) {
+        throw new Error("Not implemented yet");
+/*
         try {
 
             let [colTable, txtResTable] = await Promise.all([
@@ -154,10 +155,10 @@ export class TableManagerListener extends ModuleListener {
         }
         catch (err) {
             console.error("[TableManager] Failed to create column!", err);
-        }
+        }*/
     }
 
-    private rawTypeToDataType(type: string) {
+    public rawTypeToDataType(type: string) {
 
         let ret = "String";
 
@@ -192,7 +193,7 @@ export class TableManagerListener extends ModuleListener {
     }
 
 
-    private toCamelCase(str: string, join = ""): string {
+    public toCamelCase(str: string, join = ""): string {
 
         let pcs = str.split(/[- _]/g);
         let upper = pcs.map(val => val.toLocaleUpperCase());

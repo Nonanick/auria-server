@@ -1,6 +1,5 @@
 import { System } from "../../../../../kernel/System";
 import { AuriaConnection } from "../../../../../kernel/database/connection/AuriaConnection";
-import { TableComparisson } from "./TableComparisson";
 import { TableCompareResult } from "./TableCompareResult";
 import { Table } from "../../../../../kernel/database/structure/table/Table";
 
@@ -10,7 +9,7 @@ export class DatabaseSychronizer {
      * Auria System
      * ------------
      */
-    private system: System;
+    public system: System;
 
     /**
      * Connection
@@ -75,6 +74,7 @@ export class DatabaseSychronizer {
      * Auria;
      */
     public async tablesInAuria(): Promise<string[]> {
+        throw new Error("To be implemented");/*
         return Promise
             .all([
                 // SHOW TABLES in database
@@ -93,7 +93,7 @@ export class DatabaseSychronizer {
                     }
                 });
                 return ret;
-            });
+            });*/
     }
 
 
@@ -105,6 +105,8 @@ export class DatabaseSychronizer {
      * to the Auria System
      */
     public async tablesNotInAuria() {
+        throw new Error("To be implemented");
+        /*
         return Promise
             .all([
                 // SHOW TABLES in database
@@ -123,7 +125,7 @@ export class DatabaseSychronizer {
                     }
                 });
                 return ret;
-            });
+            });*/
     }
 
     /**
@@ -134,6 +136,7 @@ export class DatabaseSychronizer {
      * a counterpart in the database;
      */
     public async tablesOnlyInAuria() {
+        throw new Error("To be iplemented!");/*
         return Promise
             .all([
                 // SHOW TABLES in database
@@ -152,11 +155,11 @@ export class DatabaseSychronizer {
                     }
                 });
                 return ret;
-            });
+            });*/
     }
 
     public async compareAuriaTable(table: Table): Promise<TableCompareResult> {
-
+        /*
         let tableOnlyInAuria = await this.tablesOnlyInAuria();
         
         console.log("[Architect.DbSync] Tables only in Auria:", tableOnlyInAuria);
@@ -169,7 +172,8 @@ export class DatabaseSychronizer {
             comparisson.setConnectionTable(table.table);
         }
 
-        return comparisson.compare();
+        return comparisson.compare();*/
+        throw new Error("To be implemented!");
     }
 
 }

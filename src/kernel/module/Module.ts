@@ -117,28 +117,10 @@ export abstract class Module {
     }
 
     /**
-     * Return the translated title of this module
-     * 
-     * @param langVar 
-     */
-    public getTitle(langVar: string = DEFAULT_LANG): string {
-        return this.system.translate(langVar, this.title);
-    }
-
-    /**
-     * Return the translated description of this module
-     * 
-     * @param langVar 
-     */
-    public getDescription(langVar: string = DEFAULT_LANG): string {
-        return this.system.translate(langVar, this.description);
-    }
-
-    /**
      * Module: Data Permission
      * ---------------------------
      * 
-     * Inform what data permissions thismodule
+     * Inform what data permissions this module
      * 
      */
     public getModuleDataPermissions() {
@@ -168,7 +150,10 @@ export abstract class Module {
     }
 
     public getTable(user: SystemUser, table: string) {
+        throw new Error("Not immplemented yet!");
+        /*
         return this.system.getData().getTable(user, table);
+        */
     }
 
     protected abstract loadTranslations(): TranslationsByLang;

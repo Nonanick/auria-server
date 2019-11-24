@@ -9,9 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const AuriaCoreSystem_1 = require("./system/AuriaCore/AuriaCoreSystem");
-const AuriaResponse_1 = require("./kernel/http/AuriaResponse");
-const AuriaRequest_1 = require("./kernel/http/AuriaRequest");
+const SystemRequest_1 = require("./kernel/http/request/SystemRequest");
 const SystemUnavaliable_1 = require("./kernel/exceptions/kernel/SystemUnavaliable");
+const Este_1 = require("./system/Este/Este");
+const RequestStack_1 = require("./kernel/RequestStack");
 exports.Auria_ENV = "development";
 class AuriaServer {
     constructor(app) {
@@ -28,67 +29,36 @@ class AuriaServer {
          * Function to be called each time a request by a client is made
          */
         this.requestHandler = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
-            let aReq = new AuriaRequest_1.AuriaRequest(req);
-            let aRes = new AuriaResponse_1.AuriaResponse(res, next);
             try {
-                // empty system name might be empty URL
-                if (aReq.getSystemName() == "") {
-                    aRes.addToResponse({ status: "up" });
-                    aRes.send();
-                    return;
+                let stack = RequestStack_1.RequestStack.digestURL(req.url);
+                if (!this.systems.has(stack.system())) {
+                    throw new SystemUnavaliable_1.SystemUnavaliable("[SystemRequest] The requested system is not avaliable on this server!");
                 }
-                if (!this.systems.has(aReq.getSystemName())) {
-                    throw new SystemUnavaliable_1.SystemUnavaliable("The especified system was not found in this server");
-                }
-                let system = this.systems.get(aReq.getSystemName());
-                if (system != null) {
-                    aReq.setSystem(system);
-                    let user = yield aReq.digestUser();
-                    var accessManager = system.getSystemAccessManager();
-                    accessManager.setUser(user);
-                    accessManager.loadRequestStack(aReq);
-                    let canAccess = accessManager.canAccessRequest(aReq);
-                    if (canAccess) {
-                        /*
-                                                aRes.addToResponse({
-                                                    auria_server_version: this.serverSessionId,
-                                                    auria_processedRequest: aReq.digestUrl(),
-                                                    auria_requestBody: aReq.getBody()
-                                                });
-                        */
-                        let action = accessManager.getListenerAction();
-                        let ans = action(aReq, aRes);
-                        if (ans instanceof Promise) {
-                            ans.catch((err) => {
-                                console.error("[Server] Failed to proccess request! ", err);
-                                aRes.error("00001", err);
-                            });
-                        }
-                    }
-                    else {
-                        aRes.setDigestStatus('unauthorized');
-                        aRes.send();
-                    }
-                }
+                let system = this.systems.get(stack.system());
+                let systemRequest = SystemRequest_1.SystemRequestFactory.make(req, system, stack);
+                let systemResponse = system.handleRequest(systemRequest, res, next);
+                console.log("System Response to request: ", systemResponse);
             }
             catch (ex) {
-                aRes.error(ex.code, ex.message);
             }
         });
         console.log("\n[Auria Server] Initializing a new Auria server!");
+        this.app = app;
+        this.initializeExpressApp();
+        this.systems = new Map();
+        this.serverSessionId = Math.round(Math.random() * 10000000);
+        console.log("[Auria Server] Initializing Systems...");
+        this.addSystem(new AuriaCoreSystem_1.AuriaCoreSystem(this), new Este_1.Este(this));
+        console.log("[Auria Server] Server Instance Token: " + this.serverSessionId);
+    }
+    initializeExpressApp() {
         var bodyParser = require('body-parser');
         var cookieParser = require('cookie-parser');
-        this.app = app;
         this.app.use(bodyParser.urlencoded({ extended: true }));
         this.app.use(bodyParser.json());
         this.app.use(cookieParser());
         //this.app.use(cors());
         this.app.disable("x-powered-by");
-        this.systems = new Map();
-        this.serverSessionId = Math.round(Math.random() * 10000000);
-        console.log("[Auria Server] Initializing Systems...");
-        this.addSystem(new AuriaCoreSystem_1.AuriaCoreSystem(this));
-        console.log("[Auria Server] Server Instance Token: " + this.serverSessionId);
     }
     /**
      * Add a System to this server
@@ -110,4 +80,4 @@ class AuriaServer {
     }
 }
 exports.AuriaServer = AuriaServer;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQXVyaWFTZXJ2ZXIuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvQXVyaWFTZXJ2ZXIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7OztBQUNBLHdFQUFxRTtBQUVyRSwrREFBNEQ7QUFDNUQsNkRBQTBEO0FBQzFELG9GQUFpRjtBQUlwRSxRQUFBLFNBQVMsR0FBNEIsYUFBYSxDQUFDO0FBRWhFLE1BQWEsV0FBVztJQWtHcEIsWUFBWSxHQUFZO1FBM0Z4Qjs7Ozs7OztXQU9HO1FBQ0ksaUJBQVksR0FBc0IsUUFBUSxDQUFDO1FBa0JsRDs7V0FFRztRQUNLLG1CQUFjLEdBQ2hCLENBQU8sR0FBRyxFQUFFLEdBQUcsRUFBRSxJQUFJLEVBQUUsRUFBRTtZQUV2QixJQUFJLElBQUksR0FBRyxJQUFJLDJCQUFZLENBQUMsR0FBRyxDQUFDLENBQUM7WUFDakMsSUFBSSxJQUFJLEdBQUcsSUFBSSw2QkFBYSxDQUFDLEdBQUcsRUFBRSxJQUFJLENBQUMsQ0FBQztZQUV4QyxJQUFJO2dCQUVBLHVDQUF1QztnQkFDdkMsSUFBSSxJQUFJLENBQUMsYUFBYSxFQUFFLElBQUksRUFBRSxFQUFFO29CQUM1QixJQUFJLENBQUMsYUFBYSxDQUFDLEVBQUUsTUFBTSxFQUFFLElBQUksRUFBRSxDQUFDLENBQUM7b0JBQ3JDLElBQUksQ0FBQyxJQUFJLEVBQUUsQ0FBQztvQkFDWixPQUFPO2lCQUNWO2dCQUVELElBQUksQ0FBQyxJQUFJLENBQUMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxJQUFJLENBQUMsYUFBYSxFQUFFLENBQUMsRUFBRTtvQkFDekMsTUFBTSxJQUFJLHFDQUFpQixDQUFDLG9EQUFvRCxDQUFDLENBQUM7aUJBQ3JGO2dCQUVELElBQUksTUFBTSxHQUF1QixJQUFJLENBQUMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxJQUFJLENBQUMsYUFBYSxFQUFFLENBQUMsQ0FBQztnQkFFeEUsSUFBSSxNQUFNLElBQUksSUFBSSxFQUFFO29CQUNoQixJ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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiQXVyaWFTZXJ2ZXIuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvQXVyaWFTZXJ2ZXIudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7OztBQUNBLHdFQUFxRTtBQUVyRSx1RUFBMEY7QUFDMUYsb0ZBQWlGO0FBQ2pGLDZDQUEwQztBQUMxQyx3REFBcUQ7QUFJeEMsUUFBQSxTQUFTLEdBQWtDLGFBQWEsQ0FBQztBQUd0RSxNQUFhLFdBQVc7SUE4RHBCLFlBQVksR0FBWTtRQXBEeEI7Ozs7Ozs7V0FPRztRQUNJLGlCQUFZLEdBQXNCLFFBQVEsQ0FBQztRQWtCbEQ7O1dBRUc7UUFDSyxtQkFBYyxHQUNoQixDQUFPLEdBQUcsRUFBRSxHQUFHLEVBQUUsSUFBSSxFQUFFLEVBQUU7WUFDdkIsSUFBSTtnQkFFQSxJQUFJLEtBQUssR0FBa0IsMkJBQVksQ0FBQyxTQUFTLENBQUMsR0FBRyxDQUFDLEdBQUcsQ0FBQyxDQUFDO2dCQUUzRCxJQUFJLENBQUMsSUFBSSxDQUFDLE9BQU8sQ0FBQyxHQUFHLENBQUMsS0FBSyxDQUFDLE1BQU0sRUFBRSxDQUFDLEVBQUU7b0JBQ25DLE1BQU0sSUFBSSxxQ0FBaUIsQ0FBQyx1RUFBdUUsQ0FBQyxDQUFDO2lCQUN4RztnQkFFRCxJQUFJLE1BQU0sR0FBRyxJQUFJLENBQUMsT0FBTyxDQUFDLEdBQUcsQ0FBQyxLQUFLLENBQUMsTUFBTSxFQUFFLENBQUUsQ0FBQztnQkFFL0MsSUFBSSxhQUFhLEdBQWtCLG9DQUFvQixDQUFDLElBQUksQ0FBQyxHQUFHLEVBQUUsTUFBTSxFQUFFLEtBQUssQ0FBQyxDQUFDO2dCQUNqRixJQUFJLGNBQWMsR0FBRyxNQUFNLENBQUMsYUFBYSxDQUFDLGFBQWEsRUFBRSxHQUFHLEVBQUUsSUFBSSxDQUFDLENBQUM7Z0JBRXBFLE9BQU8sQ0FBQyxHQUFHLENBQUMsOEJBQThCLEVBQUUsY0FBYyxDQUFDLENBQUM7YUFDL0Q7WUFDRCxPQUFPLEVBQUUsRUFBRTthQUVWO1FBQ0wsQ0FBQyxDQUFBLENBQUM7UUFLRixPQUFPLENBQUMsR0FBRyxDQUFDLG1EQUFtRCxDQUFDLENBQUM7UUFFakUsSUFBSSxDQUFDLEdBQUcsR0FBRyxHQUFHLENBQUM7UUFDZixJQUFJLENBQUMsb0JBQW9CLEVBQUUsQ0FBQztRQUU1QixJQUFJLENBQUMsT0FBTyxHQUFHLElBQUksR0FBRyxFQUFFLENBQUM7UUFDekIsSUFBSSxDQUFDLGVBQWUsR0FBRyxJQUFJLENBQUMsS0FBSyxDQUFDLElBQUksQ0FBQyxNQUFNLEVBQUUsR0FBRyxRQUFRLENBQUMsQ0FBQztRQUc1RCxPQUFPLENBQUMsR0FBRyxDQUFDLHdDQUF3QyxDQUFDLENBQUM7UUFDdEQsSUFBSSxDQUFDLFNBQVMsQ0FDVixJQUFJLGlDQUFlLENBQUMsSUFBSSxDQUFDLEVBQ3pCLElBQUksV0FBSSxDQUFDLElBQUksQ0FBQyxDQUNqQixDQUFDO1FBQ0YsT0FBTyxDQUFDLEdBQUcsQ0FBQyx3Q0FBd0MsR0FBRyxJQUFJLENBQUMsZUFBZSxDQUFDLENBQUM7SUFFakYsQ0FBQztJQUVPLG9CQUFvQjtRQUV4QixJQUFJLFVBQVUsR0FBRyxPQUFPLENBQUMsYUFBYSxDQUFDLENBQUM7UUFDeEMsSUFBSSxZQUFZLEdBQUcsT0FBTyxDQUFDLGVBQWUsQ0FBQyxDQUFDO1FBRTVDLElBQUksQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLFVBQVUsQ0FBQyxVQUFVLENBQUMsRUFBRSxRQUFRLEVBQUUsSUFBSSxFQUFFLENBQUMsQ0FBQyxDQUFDO1FBQ3hELElBQUksQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLFVBQVUsQ0FBQyxJQUFJLEVBQUUsQ0FBQyxDQUFDO1FBQ2hDLElBQUksQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLFlBQVksRUFBRSxDQUFDLENBQUM7UUFFN0IsdUJBQXVCO1FBQ3ZCLElBQUksQ0FBQyxHQUFHLENBQUMsT0FBTyxDQUFDLGNBQWMsQ0FBQyxDQUFDO0lBQ3JDLENBQUM7SUFFRDs7OztPQUlHO0lBQ0ksU0FBUyxDQUFDLEdBQUcsTUFBZ0I7UUFDaEMsTUFBTSxDQUFDLE9BQU8sQ0FBQyxDQUFDLEdBQUcsRUFBRSxFQUFFO1lBQ25CLE9BQU8sQ0FBQyxHQUFHLENBQUMsZ0NBQWdDLEVBQUUsR0FBRyxDQUFDLElBQUksQ0FBQyxDQUFDO1lBQ3hELElBQUksQ0FBQyxPQUFPLENBQUMsR0FBRyxDQUFDLEdBQUcsQ0FBQyxJQUFJLEVBQUUsR0FBRyxDQUFDLENBQUM7UUFDcEMsQ0FBQyxDQUFDLENBQUM7UUFFSCxPQUFPLElBQUksQ0FBQztJQUNoQixDQUFDO0lBRU0sR0FBRztRQUVOLElBQUksQ0FBQyxHQUFHLENBQUMsR0FBRyxDQUFDLElBQUksRUFBRSxJQUFJLENBQUMsY0FBYyxDQUFDLENBQUM7UUFFeEMsd0NBQXdDO1FBQ3hDLDZCQUE2QjtRQUU3QixPQUFPLElBQUksQ0FBQztJQUNoQixDQUFDO0NBQ0o7QUF0SEQsa0NBc0hDIn0=

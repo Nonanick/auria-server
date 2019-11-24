@@ -14,8 +14,8 @@ export declare class TableManagerListener extends ModuleListener {
     databaseSync: ListenerAction;
     private syncComparissonWithAuria;
     private createColumnFromComparisson;
-    private rawTypeToDataType;
-    private toCamelCase;
+    rawTypeToDataType(type: string): string;
+    toCamelCase(str: string, join?: string): string;
     private syncColumnWithComparisson;
     private fetchTableDescription;
     private compareColumnDescripion;

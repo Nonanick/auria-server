@@ -2,10 +2,9 @@ import { ModuleListener, ListenerAction } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
-import { DataAccessManager } from "../../../security/data/DataAccessManager";
 import { Model } from "aurialib2";
 import { Table } from "../../../database/structure/table/Table";
-import { SQLOperators, QueryFilter } from "../../../database/dataQuery/QueryFilter";
+import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
 
 type RowSaveInfoData = {
@@ -13,7 +12,7 @@ type RowSaveInfoData = {
     values: any;
 };
 
-type TableDataFilterRequest = {
+export type TableDataFilterRequest = {
     column: string;
     op: SQLOperators;
     value: string;
@@ -231,6 +230,8 @@ export class DataSyncListener extends ModuleListener {
      */
     public fetch: ListenerAction = (req, res) => {
 
+        throw new Error("Not implemented yet");
+        /*
         let table = req.requiredParam('table');
         let dataAccess: DataAccessManager = this.module.getSystem().getData();
 
@@ -292,6 +293,7 @@ export class DataSyncListener extends ModuleListener {
                 console.error("[DataSync] Could not find table! ", err);
                 res.error("500003", "[DataSync] Failed to fetch from requested table");
             });
+            */
     };
 
     /**

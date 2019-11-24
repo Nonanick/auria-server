@@ -1,4 +1,4 @@
-import { Authenticator } from "aurialib2/dist/security/Authentication";
+import { Authenticator } from "aurialib2";
 
 export class PasswordAutheticator implements Authenticator {
 
@@ -15,9 +15,8 @@ export class PasswordAutheticator implements Authenticator {
     }
 
     setCredentials(credentials: { password: string }): Authenticator {
-
         this.__password = credentials.password;
-
+        console.log("Use password: ", this.__password, " and never be able to get it again!");
         return this;
     }
 

@@ -1,18 +1,22 @@
 import { Express, Request, Response, NextFunction } from 'express-serve-static-core';
 import { AuriaCoreSystem } from './system/AuriaCore/AuriaCoreSystem';
 import { System } from './kernel/System';
-import { AuriaResponse } from './kernel/http/AuriaResponse';
-import { AuriaRequest } from './kernel/http/AuriaRequest';
+import { SystemRequest, SystemRequestFactory } from './kernel/http/request/SystemRequest';
 import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable';
-import { SystemRequest } from './kernel/http/request/SystemRequest';
+import { Este } from './system/Este/Este';
+import { RequestStack } from './kernel/RequestStack';
 
 export type AuriaServerStatus = "online" | "offline" | "maintenance";
 
-export const Auria_ENV: "development" | "prod" = "development";
+export const Auria_ENV: "development" | "production " = "development";
+
 
 export class AuriaServer {
 
     /**
+     * App
+     * ------
+     * 
      * Express server instance
      */
     private app: Express;
@@ -48,96 +52,58 @@ export class AuriaServer {
      */
     private requestHandler: (req: Request, res: Response, next: NextFunction) => Promise<void>
         = async (req, res, next) => {
-
-            let aReq = new AuriaRequest(req);
-            let aRes = new AuriaResponse(res, next);
-
             try {
 
-                // empty system name might be empty URL
-                if (aReq.getSystemName() == "") {
-                    aRes.addToResponse({ status: "up" });
-                    aRes.send();
-                    return;
+                let stack : RequestStack = RequestStack.digestURL(req.url);
+
+                if (!this.systems.has(stack.system())) {
+                    throw new SystemUnavaliable("[SystemRequest] The requested system is not avaliable on this server!");
                 }
 
-                if (!this.systems.has(aReq.getSystemName())) {
-                    throw new SystemUnavaliable("The especified system was not found in this server");
-                }
+                let system = this.systems.get(stack.system())!;
 
-                let system: System | undefined = this.systems.get(aReq.getSystemName());
-
-                if (system != null) {
-                    aReq.setSystem(system);
-                    let user = await aReq.digestUser();
-                    var accessManager = system.getSystemAccessManager();
-                    accessManager.setUser(user);
-                    accessManager.loadRequestStack(aReq);
-
-                    let canAccess = accessManager.canAccessRequest(aReq);
-
-                    if (canAccess) {
-
-                        let action = accessManager.getListenerAction();
-
-                        let ans = action(aReq, aRes);
-
-                        if (ans instanceof Promise) {
-                            ans.catch((err) => {
-                                console.error("[Server] Failed to proccess request! ", err);
-                                aRes.error("00001", err);
-                            });
-                        }
-
-                    } else {
-                        aRes.setDigestStatus('unauthorized');
-                        aRes.send();
-                    }
-                }
-            } catch (ex) {
-                aRes.error(ex.code, ex.message);
+                let systemRequest: SystemRequest = SystemRequestFactory.make(req, system, stack);
+                let systemResponse = system.handleRequest(systemRequest, res, next);
+                
+                console.log("System Response to request: ", systemResponse);
             }
-
+            catch (ex) {
+                
+            }
         };
+
 
     constructor(app: Express) {
 
         console.log("\n[Auria Server] Initializing a new Auria server!");
 
+        this.app = app;
+        this.initializeExpressApp();
+
+        this.systems = new Map();
+        this.serverSessionId = Math.round(Math.random() * 10000000);
+
+        
+        console.log("[Auria Server] Initializing Systems...");
+        this.addSystem(
+            new AuriaCoreSystem(this),
+            new Este(this)
+        );
+        console.log("[Auria Server] Server Instance Token: " + this.serverSessionId);
+
+    }
+
+    private initializeExpressApp() {
+
         var bodyParser = require('body-parser');
         var cookieParser = require('cookie-parser');
-
-        this.app = app;
 
         this.app.use(bodyParser.urlencoded({ extended: true }));
         this.app.use(bodyParser.json());
         this.app.use(cookieParser());
 
         //this.app.use(cors());
-
         this.app.disable("x-powered-by");
-
-        this.systems = new Map();
-        this.serverSessionId = Math.round(Math.random() * 10000000);
-
-        console.log("[Auria Server] Initializing Systems...");
-
-        this.addSystem(
-            new AuriaCoreSystem(this)
-        );
-
-        console.log("[Auria Server] Server Instance Token: " + this.serverSessionId);
-
-    }
-
-    private generateSystemRequest(request: Request, system: System): SystemRequest {
-
-        let sysRequest: SystemRequest = Object.assign(request, {
-            getSystem: () => { return system },
-            getSystemName: () => { return system.name }
-        });
-
-        return sysRequest;
     }
 
     /**

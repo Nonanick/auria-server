@@ -5,11 +5,14 @@ import { SystemModule } from "./module/SystemModule/SystemModule";
 import { ModuleManager } from "./module/ModuleManager";
 import { Module } from "./module/Module";
 import { AuthModule } from "./module/AuthModule/AuthModule";
-import { Translator } from "./i18n/Translator";
 import { MysqlConnection } from "./database/connection/MysqlConnection";
 import { DataType } from "./database/structure/dataType/DataType";
 import { DataTypeRepository } from "./database/structure/dataType/DataTypeRepository";
 import { DataSteward } from "aurialib2";
+import { SystemRequest } from "./http/request/SystemRequest";
+import { Response, NextFunction } from "express-serve-static-core";
+import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
+import { ModuleRequestFactory } from "./http/request/ModuleRequest";
 
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
@@ -48,15 +51,8 @@ export abstract class System {
     protected moduleManager: ModuleManager;
 
     /**
-     * Translator
-     * 
-     * 
-     */
-    protected translator: Translator;
-
-    /**
      * System connection
-     * 
+     * ------------------
      * 
      */
     protected connection: MysqlConnection;
@@ -85,7 +81,6 @@ export abstract class System {
 
         this.connection = this.buildSystemConnection();
 
-        this.translator = new Translator(this);
         this.moduleManager = new ModuleManager(this);
         
         // If ENV == "development", systemversion does not change!
@@ -109,14 +104,6 @@ export abstract class System {
 
     public getDataType(name : string) : DataType {
         return DataTypeRepository[name];
-    }
-
-    /**
-     * Get the system translator
-     * 
-     */
-    public getTranslator(): Translator {
-        return this.translator;
     }
 
     /**
@@ -147,6 +134,8 @@ export abstract class System {
      */
     public abstract getSystemAccessManager(): AccessManager;
 
+    public abstract getAuthenticator() : SystemAuthenticator;
+
     public addUser(user: SystemUser): System {
         this.users.set(user.getUsername(), user);
         return this;
@@ -170,7 +159,6 @@ export abstract class System {
             
             for(var lang in translations) {
                 if(translations.hasOwnProperty(lang)) {
-                    this.translator.addTranslations(lang, translations[lang]);
                 }
             }
 
@@ -186,18 +174,6 @@ export abstract class System {
         return this.moduleManager.getAllModules();
     }
 
-    /**
-     * Alias o getTranslator().translateText()
-     * 
-     * @param langVar Language + Variation concatenated as a string 
-     * @param text 
-     */
-    public translate(langVar: string, text: string): string {
-        let translatedText = this.translator.translateText(langVar, text);
-        return translatedText;
-    }
-
-
     public getUser(username: string) : SystemUser | null {
         if (this.users.has(username)) {
             return this.users.get(username) as SystemUser;
@@ -208,11 +184,18 @@ export abstract class System {
 
     public removeUser(username: string) {
         return this.users.delete(username);
-
     }
 
     public getConnection(connId : number) {
         
+    }
+
+    public async handleRequest( request : SystemRequest, response : Response, next : NextFunction) {
+        
+        let user : SystemUser = await this.getAuthenticator().digestUser(request);
+
+        let moduleRequest = ModuleRequestFactory.make(request, user);
+
     }
 
 }

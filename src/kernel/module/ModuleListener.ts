@@ -4,6 +4,7 @@ import { AuriaRequest } from "../http/AuriaRequest";
 import { AuriaResponse } from "../http/AuriaResponse";
 import { EventEmitter } from "events";
 import { AuriaMiddleware } from "../http/AuriaMiddleware";
+import { ListenerRequest } from "../http/request/ListenerRequest";
 export type ModuleListenerEvents = "actionFinished" | "actionError" | "load";
 
 export type ListenerAction = (request : AuriaRequest, response : AuriaResponse) => void;
@@ -60,6 +61,10 @@ export abstract class ModuleListener extends EventEmitter {
     public setTables(tables : Map<string, Table>) : ModuleListener {
         this.tables = tables;
         return this;
+    }
+
+    public handleRequest(request : ListenerRequest) {
+
     }
 
 }

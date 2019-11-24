@@ -1,4 +1,4 @@
-import { DataStewardProvider, DataStewardReadRequest, DataStewardReadResponse } from "aurialib2";
+import { DataStewardProvider, DataStewardReadRequest, DataStewardReadResponse } from 'aurialib2';
 
 export class AuriaProvider extends DataStewardProvider {
 

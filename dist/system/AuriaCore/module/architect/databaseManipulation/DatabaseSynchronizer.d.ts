@@ -7,7 +7,7 @@ export declare class DatabaseSychronizer {
      * Auria System
      * ------------
      */
-    private system;
+    system: System;
     /**
      * Connection
      * ----------
@@ -46,7 +46,7 @@ export declare class DatabaseSychronizer {
      * Check which tables are in the database and are not imported
      * to the Auria System
      */
-    tablesNotInAuria(): Promise<string[]>;
+    tablesNotInAuria(): Promise<void>;
     /**
      * Tables ONLY in Auria
      * --------------------
@@ -54,6 +54,6 @@ export declare class DatabaseSychronizer {
      * Check which table definitions are present in Auria and does not have
      * a counterpart in the database;
      */
-    tablesOnlyInAuria(): Promise<string[]>;
+    tablesOnlyInAuria(): Promise<void>;
     compareAuriaTable(table: Table): Promise<TableCompareResult>;
 }

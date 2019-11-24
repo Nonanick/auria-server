@@ -2,7 +2,13 @@ import { ModuleListener, ListenerAction } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
+import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+export declare type TableDataFilterRequest = {
+    column: string;
+    op: SQLOperators;
+    value: string;
+};
 export declare class DataSyncListener extends ModuleListener {
     getRequiredRequestHandlers(): AuriaMiddleware[];
     /**
