@@ -1,6 +1,10 @@
-import { System, DEFAULT_LANG } from "../System";
+import { System } from "../System";
 import { ModuleListener } from "./ModuleListener";
 import { SystemUser } from "../security/SystemUser";
+import { ModuleRequest } from "../http/request/ModuleRequest";
+import { ListenerUnavaliable } from "../exceptions/kernel/ListenerUnavaliable";
+import { ListenerRequest, ListenerRequestFactory } from "../http/request/ListenerRequest";
+import { Response } from "express-serve-static-core";
 
 export abstract class Module {
 
@@ -171,6 +175,23 @@ export abstract class Module {
             }
         }
         return translations;
+    }
+
+    public async handleRequest(request: ModuleRequest, response: Response) {
+
+        let requestListener: string = request.getRequestStack().listener();
+
+        let listener : ModuleListener;
+        if (!this.listeners.has(requestListener) && !this.listeners.has(requestListener + "Listener")) {
+            throw new ListenerUnavaliable("Requested Listener '" + requestListener + "' does not exist in this module!");
+        } else {
+            listener = this.listeners.get(requestListener)! || this.listeners.get(requestListener + "Listener")!;
+        }
+
+        let listenerRequest : ListenerRequest = ListenerRequestFactory.make(request, listener);
+
+        return listener.handleRequest(listenerRequest);
+
     }
 
 }

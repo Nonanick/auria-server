@@ -226,12 +226,15 @@ export class Column extends KernelEntity {
         return this;
     }
 
-    public getDataType(): DataType {
+    public getDataType(): DataType | null {
+        return null;
+        /*
         let dt = this.system.getDataType(this.dataType);
+
         if(dt== null) {
             console.error("[Column] DataType is null!:", this.dataType);
         }
-        return dt;
+        return dt;*/
     }
 
     public isPrimaryKey() : boolean {

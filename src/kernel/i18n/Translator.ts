@@ -51,12 +51,11 @@ export class Translator {
     protected buildTranslations(lang: string = DEFAULT_LANG, variation: string = "") {
 
         this.system.getSystemConnection()
-            .query(
-                "SELECT name, value \
-          FROM text_resource \
-          WHERE `lang`=? AND `variation` LIKE ?",
-                [lang, '%' + variation + '%']
-            ).then((res) => {
+            .select("name", "value")
+            .from("text_resource")
+            .where("lang", lang)
+            .andWhere("variation", "like", "%" + variation + "%")
+            .then((res) => {
                 let trans: {
                     [transKey: string]: string
                 } = {};

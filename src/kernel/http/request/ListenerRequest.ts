@@ -1,7 +1,7 @@
-import { SystemRequest } from "./SystemRequest";
 import { ModuleListener } from "../../module/ModuleListener";
+import { ModuleRequest } from "./ModuleRequest";
 
-export interface ListenerRequest extends SystemRequest {
+export interface ListenerRequest extends ModuleRequest {
 
     getTranslations(lang: string): { [translationKey: string]: string };
 
@@ -13,12 +13,12 @@ export interface ListenerRequest extends SystemRequest {
 
 export class ListenerRequestFactory {
     
-    public static make(request: SystemRequest, listener: ModuleListener): ListenerRequest {
+    public static make(request: ModuleRequest, listener: ModuleListener): ListenerRequest {
 
         let listRequest: ListenerRequest = Object.assign(
             {
                 getTranslations: (lang: string) => {
-                    return request.getSystem().getTranslator().getTranslations(lang)!;
+                    return {};//request.getSystem().getTranslator().getTranslations(lang)!;
                 },
                 getListener: () => listener,
                 getListenerName: () => listener.name,

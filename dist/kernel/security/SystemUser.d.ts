@@ -1,9 +1,9 @@
+import { User } from "aurialib2";
 import { Table } from "../database/structure/table/Table";
 import { System } from "../System";
-import { AuriaRequest } from "../http/AuriaRequest";
 import { UserRole } from "./UserRole";
-import { User } from "aurialib2";
 import { DataPermission } from "./permission/DataPermission";
+import { LoginRequest } from "../module/SystemModule/requests/LoginRequest";
 export declare class SystemUser extends User {
     static COOKIE_USERNAME: string;
     static COOKIE_HANDSHAKE: string;
@@ -82,17 +82,6 @@ export declare class SystemUser extends User {
      * Adds a random number to the login request
      */
     protected randomSalt: number;
-    /**
-     * Handshake Token
-     * ---------------
-     *
-     * "Keep me logged in" token, used to retrieve a transaction token
-     * without the users password, valid until the server restarts!
-     *
-     * # In 'dev' it does not uses the server version therefore can be used
-     * between server restarts
-     */
-    private handshakeToken;
     private roles;
     private canAccessRoles;
     /**
@@ -131,7 +120,7 @@ export declare class SystemUser extends User {
     getAccessLevel(): number;
     setAccessLevel(level: SystemUserPrivilege): this;
     getUsername(): string;
-    startSession(request: AuriaRequest): void;
+    startSession(request: LoginRequest): void;
     buildUser(): void;
     private buildAccessPermission;
     private buildDataPermission;
@@ -144,15 +133,6 @@ export declare class SystemUser extends User {
     setIp(ip: string): this;
     getUserInfo(): Promise<UserInformationData>;
     private buildUserInformation;
-    getHandshakeToken(renew?: boolean): Promise<string>;
-    getTransactionToken(renew?: boolean): Promise<string>;
-    generateTokenPayload(): LoginPayload;
-    /**
-     * Generate a new toke based on the user info
-     *
-     * @param randomSalt User random salt to generate the token
-     */
-    private renewToken;
     setSystem(system: System): this;
     /**
      * User ID
@@ -165,26 +145,11 @@ export declare class SystemUser extends User {
      */
     setId(_id: number): this;
     getId(): number;
+    getLoginTime(): number;
     getUserRoles(): Promise<UserRole[]>;
     getUserRoleIds(): Promise<number[]>;
     getUserAccessRoles(): UserRole[];
     getUserAccessRoleIds(): number[];
-    validateHandshake(request: AuriaRequest, handshake: string): Promise<boolean>;
-    /**
-     * Login with Password
-     * --------------------
-     *
-     * Tries to login this user using the provided username
-     * + password, if this succeeds this user will no longer be
-     * a "guest" and will be able to access the system as a logged
-     * user
-     *
-     * @param username
-     * @param password
-     */
-    loginWithPassword(username: string, password: string): Promise<boolean>;
-    loginWithPayload(payload: LoginPayload): Promise<boolean>;
-    verifyLoginPayload(payload: LoginPayload): boolean;
     logout(): void;
 }
 export declare enum SystemUserPrivilege {

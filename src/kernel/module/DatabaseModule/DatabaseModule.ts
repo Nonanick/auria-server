@@ -6,7 +6,7 @@ import { ModuleManager } from "../ModuleManager";
 import { Languages } from "../../i18n/Translator";
 
 export class DatabaseModule extends Module {
-    
+
 
     /**
      * Populate a Module with information coming from the database
@@ -43,10 +43,11 @@ export class DatabaseModule extends Module {
 
         let conn = this.system.getSystemConnection();
 
-        conn.query(
-            "SELECT name, title, description \
-            FROM module_listener \
-            WHERE module_name=? AND active=?", [this.name, 1])
+        conn
+            .select("name", "title", "description")
+            .from("module_listener")
+            .where("module_name", this.name)
+            .andWhere("active", 1)
             .then((res) => {
                 (res as ModuleListenerRowData[]).forEach((listInfo) => {
                     let list = ModuleManager.getGlobalListener(this, listInfo.name);
@@ -90,7 +91,7 @@ export class DatabaseModule extends Module {
         }
     }
 
-    
+
     protected loadTranslations(): TranslationsByLang {
         let translations: TranslationsByLang = {};
         translations[Languages.English] = {};

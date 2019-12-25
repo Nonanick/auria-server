@@ -363,7 +363,7 @@ export class TableDataQuery {
             this.getSQL()
                 .then((sql) => {
                     let conn = this.system.getSystemConnection();
-                    return conn.query(sql.sql, sql.values);
+                    return conn.raw(sql.sql, sql.values);
                 })
                 .then((res) => {
                     let models: RowModel[] = [];

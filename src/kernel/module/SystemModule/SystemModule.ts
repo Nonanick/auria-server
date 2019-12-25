@@ -8,25 +8,35 @@ import { DataSyncListener } from "./listeners/DataSyncListener";
 import { SystemEnglish } from "./i18n/Lang-En";
 import { Languages, Translator } from "../../i18n/Translator";
 import { SystemPortuguese } from "./i18n/Lang-Pt";
-
-
+import { ModuleRequest } from "../../http/request/ModuleRequest";
+import { Response } from "express-serve-static-core";
+import { CookieOptions } from "express";
+import { LoginRequestFactory } from "./requests/LoginRequest";
 
 export class SystemModule extends Module {
 
     private __translations: TranslationsByLang = {};
 
+    private loginListener: LoginListener;
+
     constructor(system: System) {
         super(system, "SystemModule");
+
+        this.loginListener = new LoginListener(this);
 
         this.addListener(
             // Add translations capability
             new I18nListener(this),
+
             // Add UI interface parameters
             new UIListener(this),
+
             // Add Table metadata exposure
             new TableListener(this),
+
             // Add Login functionality to the server!
-            new LoginListener(this),
+            this.loginListener,
+
             // Add Data Sync functionality
             new DataSyncListener(this),
         );
@@ -56,6 +66,16 @@ export class SystemModule extends Module {
             }
         }
         return translations;
+    }
+
+    public handleRequest(request: ModuleRequest, response: Response) {
+
+        // Adds 'setCookie' and 'loginWithPassword' capabilities
+        if (request.getRequestStack().listener() == this.loginListener.name
+            || request.getRequestStack().listener() + "Listener" == this.loginListener.name)
+            request = LoginRequestFactory.make(request, response, this.system);
+
+        return super.handleRequest(request, response);
     }
 
 

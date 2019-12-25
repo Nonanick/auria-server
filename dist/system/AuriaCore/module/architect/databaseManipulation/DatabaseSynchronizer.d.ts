@@ -1,7 +1,7 @@
 import { System } from "../../../../../kernel/System";
-import { AuriaConnection } from "../../../../../kernel/database/connection/AuriaConnection";
 import { TableCompareResult } from "./TableCompareResult";
 import { Table } from "../../../../../kernel/database/structure/table/Table";
+import Knex = require("knex");
 export declare class DatabaseSychronizer {
     /**
      * Auria System
@@ -15,7 +15,7 @@ export declare class DatabaseSychronizer {
      */
     private connection;
     private showTablesPromise;
-    constructor(system: System, connection: AuriaConnection);
+    constructor(system: System, connection: Knex);
     /**
      * Get Tables From Connection
      * --------------------------

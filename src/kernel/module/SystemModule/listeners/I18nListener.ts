@@ -26,11 +26,11 @@ export class I18nListener extends ModuleListener {
     public getTranslations: (req: AuriaRequest, res: AuriaResponse) => void =
         (req, res) => {
 
-            let lang: string = (req.requiredParam('lang') as string);
+            //let lang: string = (req.requiredParam('lang') as string);
 
-            res.addToResponse({
+            /*res.addToResponse({
                 translations: this.module.getSystem().getTranslator().getTranslations(lang)
-            });
+            });*/
 
             res.send();
         };

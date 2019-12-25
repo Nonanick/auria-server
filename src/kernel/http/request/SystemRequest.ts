@@ -1,10 +1,8 @@
-import { Request } from 'express-serve-static-core';
 import { System } from '../../System';
-import { SystemUnavaliable } from '../../exceptions/kernel/SystemUnavaliable';
 import { RequestStack } from '../../RequestStack';
+import { ServerRequest } from './ServerRequest';
 
-
-export interface SystemRequest extends Request {
+export interface SystemRequest extends ServerRequest {
 
     /**
      * [GET] System
@@ -40,22 +38,46 @@ export interface SystemRequest extends Request {
 
 }
 
+/**
+ * [FACTORY] System Request
+ * -------------------------
+ * 
+ * Factory function, will produce SystemRequest based on the 
+ * > *Express **Request** object* + **System** + **RequestStack**
+ * 
+ */
+export type SystemRequestFactoryFunction =
+    (request: ServerRequest, system: System, stack: RequestStack) => SystemRequest;
+
 export class SystemRequestFactory {
 
-    public static make(request: Request, system: System, stack : RequestStack): SystemRequest {
+    /**
+     * Factory function to be used to generate a SystemRequest
+     * based on a Express Request object, the system that will 
+     * be handling the request
+     * 
+     */
+    private factoryFn: SystemRequestFactoryFunction =
+        (request, system, stack) => {
+            let serverRequest: SystemRequest = Object.assign(
+                {
+                    getSystem: () => system,
+                    getSystemName: () => system.name,
+                    getRequestStack: () => stack
+                },
+                request
+            );
 
-        let serverRequest : SystemRequest = Object.assign(
-            {
-                getSystem : () => system,
-                getSystemName : () => system.name,
-                getRequestStack : () => stack
-            },
-            request
-        );
+            return serverRequest;
+        };
 
-        return serverRequest;
-
+    public setFactoryFunction(fn: SystemRequestFactoryFunction) {
+        this.factoryFn = fn;
     }
 
-   
+    public make(request: ServerRequest, system: System, stack: RequestStack): SystemRequest {
+        return this.factoryFn(request, system, stack);
+    }
+
+
 }

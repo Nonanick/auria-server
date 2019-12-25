@@ -9,8 +9,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const ModuleListener_1 = require("../../ModuleListener");
-const AuriaEventResponse_1 = require("../../../http/AuriaEventResponse");
-const RowModel_1 = require("../../../database/structure/rowModel/RowModel");
 class DataSyncListener extends ModuleListener_1.ModuleListener {
     constructor(module) {
         super(module, "DataSync");
@@ -60,46 +58,49 @@ class DataSyncListener extends ModuleListener_1.ModuleListener {
          * >> browsers limit the aout of keep-alive connections
          * >> made to a server!
          */
-        this.listen = (req, res) => __awaiter(this, void 0, void 0, function* () {
+        this.listen = (req) => __awaiter(this, void 0, void 0, function* () {
             //# - Table : Required
-            let table = req.requiredParam('table');
-            this.module.getTable(req.getUser(), table)
+            //let table: string = req.requiredParam('table');
+            /*this.module.getTable(req.getUser(), table)
                 //Check for tables avaliable to the user
                 .then((table) => {
-                if (table != null) {
-                    let tableEmitter = table;
-                    // - Transform response in a EventStream
-                    let response = new AuriaEventResponse_1.AuriaEventResponse(res, req.getUser());
-                    // - Attach event listeners to the response
-                    this.attachListenersToTable(response, tableEmitter);
-                    // - Close when client closes the connection
-                    req.getRawRequest().on('close', () => {
-                        response.closeConnection();
-                        // # - Clear tracking models from user
-                        req.getUser().clearTrackingModels(table.getName());
-                        // # - Detach table listeners
-                        this.detachListenersOfTable(response, tableEmitter);
-                        // # - End response stream
-                        res.getRawResponse().end();
-                    });
-                }
-                else {
-                    console.error("[DataSync] Tables:", table);
-                    res.error("500001", "[DataSync] User can't access this table '" + table + "'!");
-                }
-            })
+                    if (table != null) {
+                        let tableEmitter = table;
+                        // - Transform response in a EventStream
+                        let response = new AuriaEventResponse(res, req.getUser());
+                        // - Attach event listeners to the response
+                        this.attachListenersToTable(response, tableEmitter);
+                        // - Close when client closes the connection
+                        req.getRawRequest().on('close', () => {
+                            response.closeConnection();
+                            // # - Clear tracking models from user
+                            req.getUser().clearTrackingModels(table.getName());
+                            // # - Detach table listeners
+                            this.detachListenersOfTable(response, tableEmitter);
+                            // # - End response stream
+                            res.getRawResponse().end();
+                        });
+                    } else {
+                        console.error("[DataSync] Tables:", table);
+                        res.error("500001", "[DataSync] User can't access this table '" + table + "'!");
+                    }
+                })
                 // Failed, why?
-                .catch((err) => {
-                console.error("[DataSync] Failed to open event stream for table ", table, "\nUser Trying to access it: ", req.getUser().getUsername(), "\nError: ", err);
-                res.error("500002", "[DataSync] Failed to fetch tables from user!");
-            });
+                .catch((err: any) => {
+                    console.error(
+                        "[DataSync] Failed to open event stream for table ", table,
+                        "\nUser Trying to access it: ", req.getUser().getUsername(),
+                        "\nError: ", err
+                    );
+                    res.error("500002", "[DataSync] Failed to fetch tables from user!");
+                });*/
         });
         /**
          * [DataSync]: Fetch
          * ------------------
          *
          */
-        this.fetch = (req, res) => {
+        this.fetch = (req) => {
             throw new Error("Not implemented yet");
             /*
             let table = req.requiredParam('table');
@@ -170,99 +171,96 @@ class DataSyncListener extends ModuleListener_1.ModuleListener {
          * --------------------
          *
          */
-        this.save = (req, res) => {
+        this.save = (req) => {
             // # - Table, required
-            let tableName = req.requiredParam("table");
+            // let tableName = req.requiredParam("table");
             // # Try to load page
-            this.module.getTable(req.getUser(), tableName).then((table) => __awaiter(this, void 0, void 0, function* () {
-                // Not null?
-                if (table != null) {
-                    let rows = req.requiredParam("rows");
-                    let updatedModels = [];
-                    let updatedModelsJson = [];
-                    let createdModels = [];
-                    let createdModelsJson = [];
-                    // # - For each row passed
-                    for (var index in rows) {
-                        let row = rows[index];
-                        let id = row.id;
-                        let m = null;
-                        // # - ID undefined?
-                        if (id != null) {
-                            m = yield table.buildModel(id);
-                        }
-                        else {
-                            m = new RowModel_1.RowModel(table);
-                        }
-                        // # - Row exists?
-                        if (m != null && m instanceof RowModel_1.RowModel) {
-                            m.setAttribute(row.values);
-                            try {
-                                if (yield m.save(req.getUser())) {
-                                    if (id == null) {
-                                        createdModels.push(m);
-                                        createdModelsJson.push(m.asJSON());
-                                    }
-                                    else {
-                                        updatedModels.push(m);
-                                        updatedModelsJson.push(m.asJSON());
-                                    }
-                                }
-                            }
-                            catch (err) {
-                                res.error("30008", "Failed to save rows!");
-                                return;
-                            }
-                        }
-                    }
-                    if (updatedModels.length > 0) {
-                        table.emit("update", updatedModels);
-                    }
-                    if (createdModels.length > 0) {
-                        table.emit("create", createdModels);
-                    }
-                    res.addToResponse({
-                        "status": "Saved " + (updatedModels.length + createdModels.length) + " of " + rows.length + " row(s)!",
-                        "updatedModels": updatedModelsJson,
-                        "createdModels": createdModelsJson
-                    });
-                    res.send();
-                }
-                else {
-                    res.error("30007", "[DataSync] Table was not accessible to this user or does not exists");
-                }
-            })).catch((err) => {
-                console.error("[DataSync] Failed to retrieve table: ", err);
-                res.error("30006", "Can't reach requested table!");
-            });
+            /* this.module.getTable(req.getUser(), tableName).then(async (table) => {
+                 // Not null?
+                 if (table != null) {
+     
+                     let rows = req.requiredParam("rows") as RowSaveInfoData[];
+                     let updatedModels: RowModel[] = [];
+                     let updatedModelsJson: any[] = [];
+                     let createdModels: RowModel[] = [];
+                     let createdModelsJson: any[] = [];
+     
+                     // # - For each row passed
+                     for (var index in rows) {
+                         let row = rows[index];
+                         let id = row.id;
+                         let m: Model | null = null;
+     
+                         // # - ID undefined?
+                         if (id != null) {
+                             m = await table.buildModel(id);
+                         } else {
+                             m = new RowModel(table);
+                         }
+     
+                         // # - Row exists?
+                         if (m != null && m instanceof RowModel) {
+                             m.setAttribute(row.values);
+                             try {
+                                 if (await m.save(req.getUser())) {
+                                     if (id == null) {
+                                         createdModels.push(m);
+                                         createdModelsJson.push(m.asJSON());
+                                     } else {
+                                         updatedModels.push(m);
+                                         updatedModelsJson.push(m.asJSON());
+                                     }
+                                 }
+                             } catch (err) {
+                                 res.error("30008", "Failed to save rows!");
+                                 return;
+                             }
+                         }
+                     }
+                     if (updatedModels.length > 0) {
+                         table.emit("update", updatedModels);
+                     }
+                     if (createdModels.length > 0) {
+                         table.emit("create", createdModels);
+                     }
+                     res.addToResponse({
+                         "status": "Saved " + (updatedModels.length + createdModels.length) + " of " + rows.length + " row(s)!",
+                         "updatedModels": updatedModelsJson,
+                         "createdModels": createdModelsJson
+                     });
+                     res.send();
+                 } else {
+                     res.error("30007", "[DataSync] Table was not accessible to this user or does not exists");
+                 }
+             }).catch((err) => {
+                 console.error("[DataSync] Failed to retrieve table: ", err);
+                 res.error("30006", "Can't reach requested table!");
+             });*/
         };
-        this.delete = (req, res) => {
-            let tableName = req.requiredParam('table');
-            let rowId = req.requiredParam('id');
-            this.module.getTable(req.getUser(), tableName).then((table) => __awaiter(this, void 0, void 0, function* () {
-                if (table != null) {
-                    let model = yield table.buildModel(rowId);
-                    if (model != null) {
-                        let deleted = model.delete(req.getUser());
-                        if (deleted) {
-                            table.emit("delete", [model]);
-                            res.addToResponse({
-                                "status": "Row deleted!"
-                            });
-                            res.send();
-                        }
-                        else {
-                            res.error("500010", "Failed to delete row");
-                        }
-                    }
-                    else {
-                        res.error("500011", "Failed to find model, do you have access to it?");
-                    }
-                }
-                else {
-                    res.error("500012", "Failed to find table, do you have access to it?");
-                }
-            }));
+        this.delete = (req) => {
+            //let tableName = req.requiredParam('table');
+            //let rowId = req.requiredParam('id');
+            /* this.module.getTable(req.getUser(), tableName).then(async (table) => {
+                 if (table != null) {
+                     let model = await table.buildModel(rowId);
+                     if (model != null) {
+                         let deleted = model.delete(req.getUser());
+                         if (deleted) {
+                             table.emit("delete", [model]);
+                             res.addToResponse({
+                                 "status": "Row deleted!"
+                             });
+                             res.send();
+                         } else {
+                             res.error("500010", "Failed to delete row");
+                         }
+                     } else {
+                         res.error("500011", "Failed to find model, do you have access to it?");
+                     }
+                 } else {
+                     res.error("500012", "Failed to find table, do you have access to it?");
+                 }
+             });*/
         };
         this.listenersOfResponse = new Map();
     }
@@ -346,4 +344,4 @@ class DataSyncListener extends ModuleListener_1.ModuleListener {
     }
 }
 exports.DataSyncListener = DataSyncListener;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiRGF0YVN5bmNMaXN0ZW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uLy4uL3NyYy9rZXJuZWwvbW9kdWxlL1N5c3RlbU1vZHVsZS9saXN0ZW5lcnMvRGF0YVN5bmNMaXN0ZW5lci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7O0FBQUEseURBQXNFO0FBRXRFLHlFQUFzRTtBQUN0RSw0RUFBeUU7QUFpQnpFLE1BQWEsZ0JBQWlCLFNBQVEsK0JBQWM7SUFlaEQsWUFBWSxNQUFjO1FBQ3RCLEtBQUssQ0FBQyxNQUFNLEVBQUUsVUFBVSxDQUFDLENBQUM7UUFlOUI7Ozs7OztXQU1HO1FBQ08sOEJBQXlCLEdBQy9CLENBQUMsUUFBNEIsRUFBRSxhQUErQyxFQUFFLEVBQUU7WUFFOUUsT0FBTyxDQUFDLEdBQUcsQ0FBQyw0Q0FBNEMsQ0FBQyxDQUFDO1lBRTFELElBQUksTUFBTSxHQUFRLEVBQUUsQ0FBQztZQUVyQixJQUFJLEtBQUssQ0FBQyxPQUFPLENBQUMsYUFBYSxDQUFDLElBQUksYUFBYSxZQUFZLEdBQUcsRUFBRTtnQkFDOUQsYUFBYSxDQUFDLE9BQU8sQ0FBQyxDQUFDLEtBQWUsRUFBRSxFQUFFO29CQUN0QywrQkFBK0I7b0JBQy9CLElBQUksUUFBUSxDQUFDLE9BQU8sRUFBRSxDQUFDLHFCQUFxQixDQUN4QyxLQUFLLENBQUMsUUFBUSxFQUFFLENBQUMsT0FBTyxFQUFFLENBQzdCLENBQUMsR0FBRyxDQUFDLEtBQUssQ0FBQyxLQUFLLEVBQUUsQ0FBQyxFQUNsQjt3QkFDRSxNQUFNLENBQUMsS0FBSyxDQUFDLEtBQUssRUFBRSxDQUFDLEdBQUcsS0FBSyxDQUFDLE1BQU0sRUFBRSxDQUFDO3FCQUMxQztnQkFDTCxDQUFDLENBQUMsQ0FBQzthQUNOO2lCQUFNO2dCQUNILE1BQU0sR0FBRyxDQUFDLGFBQWEsQ0FBQyxNQUFNLEVBQUUsQ0FBQyxDQUFDO2FBQ3JDO1lBRUQsUUFBUSxDQUFDLFFBQVEsQ0FB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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiRGF0YVN5bmNMaXN0ZW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uLy4uL3NyYy9rZXJuZWwvbW9kdWxlL1N5c3RlbU1vZHVsZS9saXN0ZW5lcnMvRGF0YVN5bmNMaXN0ZW5lci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7O0FBQUEseURBQXNFO0FBbUJ0RSxNQUFhLGdCQUFpQixTQUFRLCtCQUFjO0lBZWhELFlBQVksTUFBYztRQUN0QixLQUFLLENBQUMsTUFBTSxFQUFFLFVBQVUsQ0FBQyxDQUFDO1FBZTlCOzs7Ozs7V0FNRztRQUNPLDhCQUF5QixHQUMvQixDQUFDLFFBQTRCLEVBQUUsYUFBK0MsRUFBRSxFQUFFO1lBRTlFLE9BQU8sQ0FBQyxHQUFHLENBQUMsNENBQTRDLENBQUMsQ0FBQztZQUUxRCxJQUFJLE1BQU0sR0FBUSxFQUFFLENBQUM7WUFFckIsSUFBSSxLQUFLLENBQUMsT0FBTyxDQUFDLGFBQWEsQ0FBQyxJQUFJLGFBQWEsWUFBWSxHQUFHLEVBQUU7Z0JBQzlELGFBQWEsQ0FBQyxPQUFPLENBQUMsQ0FBQyxLQUFlLEVBQUUsRUFBRTtvQkFDdEMsK0JBQStCO29CQUMvQixJQUFJLFFBQVEsQ0FBQyxPQUFPLEVBQUUsQ0FBQyxxQkFBcUIsQ0FDeEMsS0FBSyxDQUFDLFFBQVEsRUFBRSxDQUFDLE9BQU8sRUFBRSxDQUM3QixDQUFDLEdBQUcsQ0FBQyxLQUFLLENBQUMsS0FBSyxFQUFFLENBQUMsRUFDbEI7d0JBQ0UsTUFBTSxDQUFDLEtBQUssQ0FBQyxLQUFLLEVBQUUsQ0FBQyxHQUFHLEtBQUssQ0FBQyxNQUFNLEVBQUUsQ0FBQztxQkFDMUM7Z0JBQ0wsQ0FBQyxDQUFDLENBQUM7YUFDTjtpQkFBTTtnQkFDSCxNQUFNLEdBQUcsQ0FBQyxhQUFhLENBQUMsTUFBTSxFQUFFLENBQUMsQ0FBQzthQUNyQztZQUVELFFBQVEsQ0FBQyxRQUFRLENBQUMsUUFBUSxFQUFFLEVBQUUsUUFBUSxFQUFF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

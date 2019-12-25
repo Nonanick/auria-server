@@ -8,7 +8,7 @@ import { Model } from "aurialib2";
 import { RowModel } from "../rowModel/RowModel";
 import { QueryFilter } from "../../dataQuery/QueryFilter";
 import { TableAction } from "./TableAction";
-import { AuriaConnection } from "../../connection/AuriaConnection";
+import Knex = require("knex");
 
 export class Table extends KernelEntity {
 
@@ -142,35 +142,35 @@ export class Table extends KernelEntity {
                 (resolve, reject) => {
 
                     let cols = new Map<string, Column>();
-                    let conn: AuriaConnection = this.system.getSystemConnection();
+                    let conn: Knex = this.system.getSystemConnection();
 
-                    conn.query(
-                        "SELECT \
-                        _id as id, `name`, `column`, `title`, `description`, `data_type`, `attributes`, `table_type`, `sql_type`, `extra`, `length`, `default_value`  \
-                    FROM `columns`\
-                    WHERE `table_name`=? AND active=? \ ", [this.name, 1]
-                    ).then((res) => {
-                        (res as ColumnDataRow[]).forEach((cData) => {
-                            let col = new Column(this.system, this, cData.name)
-                            col.column = cData.column;
+                    conn
+                        .select("_id as id", "name", "column", "title", "description", "data_type", "attributes", "table_type", "sql_type", "extra", "length", "default_value")
+                        .from("columns")
+                        .where("table_name", this.name)
+                        .andWhere("active", 1)
+                        .then((res) => {
+                            (res as ColumnDataRow[]).forEach((cData) => {
+                                let col = new Column(this.system, this, cData.name)
+                                col.column = cData.column;
 
-                            col
-                                .setDescription(cData.description)
-                                .setDataType(cData.data_type)
-                                .setAttributes(cData.attributes)
-                                .setTitle(cData.title)
-                                .setTableType(cData.table_type)
-                                .setDefaultValue(cData.default_value)
-                                .setMaxLength(cData.length)
-                                .setNullable(cData.nullable == "YES")
-                                .setExtra(cData.extra)
-                                .setRawType(cData.sql_type);
-                            cols.set(cData.name, col);
+                                col
+                                    .setDescription(cData.description)
+                                    .setDataType(cData.data_type)
+                                    .setAttributes(cData.attributes)
+                                    .setTitle(cData.title)
+                                    .setTableType(cData.table_type)
+                                    .setDefaultValue(cData.default_value)
+                                    .setMaxLength(cData.length)
+                                    .setNullable(cData.nullable == "YES")
+                                    .setExtra(cData.extra)
+                                    .setRawType(cData.sql_type);
+                                cols.set(cData.name, col);
+                            });
+                            resolve(cols);
+                        }).catch((err) => {
+                            reject("SQL Error : " + err.message);
                         });
-                        resolve(cols);
-                    }).catch((err) => {
-                        reject("SQL Error : " + err.message);
-                    });
 
                 });
         }
@@ -179,10 +179,10 @@ export class Table extends KernelEntity {
     }
 
     public getTitle(langVar: string = DEFAULT_LANG) {
-        return this.system.translate(langVar, this.title);
+        //return this.system.translate(langVar, this.title);
     }
     public getDescription(langVar: string = DEFAULT_LANG) {
-        return this.system.translate(langVar, this.description);
+        //return this.system.translate(langVar, this.description);
     }
 
     public getName(): string {
@@ -285,10 +285,10 @@ export class Table extends KernelEntity {
 
     public async buildModel(key: string): Promise<RowModel | null> {
 
-        if (this._models.has(key)) {
+        /*if (this._models.has(key)) {
             console.log("[Table] Build model already has key ", key, " Model ", this._models.get(key));
             return this._models.get(key) as RowModel;
-        }
+        }*/
 
         let promise = new Promise<RowModel | null>(
             (resolve, reject) => {
@@ -298,7 +298,7 @@ export class Table extends KernelEntity {
                 q.fetch().then(async (rows) => {
                     console.log("[Table] Found rows: ", rows.length, await q.getSQL());
                     if (rows.length == 1) {
-                        this._models.set(key, rows[0]);
+                        /* this._models.set(key, rows[0]);*/
                         resolve(rows[0]);
                     } else {
                         console.error("[Table] Build Model failed to pinpoint using provided key:", rows);

@@ -7,116 +7,63 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (Object.hasOwnProperty.call(mod, k)) result[k] = mod[k];
-    result["default"] = mod;
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const ModuleListener_1 = require("../../ModuleListener");
-const SystemUser_1 = require("../../../security/SystemUser");
-const jwt = __importStar(require("jsonwebtoken"));
-const Auth_1 = require("../../../../config/Auth");
+const LogoutFailed_1 = require("../exceptions/login/LogoutFailed");
+const LoginFailed_1 = require("../exceptions/login/LoginFailed");
+const LoginAttemptManager_1 = require("./login/LoginAttemptManager");
 class LoginListener extends ModuleListener_1.ModuleListener {
     constructor(module) {
         super(module, "LoginListener");
-        this.login = (req, res) => __awaiter(this, void 0, void 0, function* () {
-            let username = req.requiredParam('username');
+        this.login = (req) => __awaiter(this, void 0, void 0, function* () {
+            let loginReq = req;
+            let username = req.getRequiredParam('username');
+            let currentAttempt = this.loginAttemptManager.requestLoginAttempt(loginReq);
             // Login with password
             if (req.hasParam('password')) {
-                let password = req.requiredParam('password');
-                let success = yield req.getUser()
-                    .loginWithPassword(username, password);
-                if (success) {
-                    try {
-                        let user = this.module.getSystem().getUser(username);
-                        user.startSession(req);
-                        user.buildUser();
-                        let tokenPayload = user.generateTokenPayload();
-                        let jwtString = jwt.sign(tokenPayload, Auth_1.AuthConfig.jwtSecret, {
-                            expiresIn: 60 * 60 * 24
-                        });
-                        res.setCookie(SystemUser_1.SystemUser.COOKIE_HANDSHAKE, jwtString);
-                        res.setCookie(SystemUser_1.SystemUser.COOKIE_USERNAME, username);
-                        res.addToResponse({
-                            loggedIn: true
-                        });
-                        res.send();
-                    }
-                    catch (error) {
-                        res.error("20001", "Failed to locate user!");
-                    }
-                }
-                else {
-                    res.error("20002", "Login attempt failed!");
-                }
+                let password = req.getRequiredParam('password');
+                return loginReq
+                    .loginWithPassword(username, password, loginReq)
+                    .then((user) => {
+                    // Login successfull
+                    currentAttempt.success = true;
+                    let attempts = this.loginAttemptManager.clearLoginAttempts(loginReq);
+                    return {
+                        message: "Login Successful!",
+                        attempts: attempts,
+                        username: user.getUsername(),
+                        system: req.getRequestStack().system()
+                    };
+                }).catch((err) => {
+                    throw err;
+                });
             }
             else {
-                throw new Error("[Login] Insufficient parameters were passed!");
+                throw new LoginFailed_1.LoginFailed("Insufficient parameters passed!");
             }
         });
-        this.handshake = (req, res) => __awaiter(this, void 0, void 0, function* () {
-            let username = req.requiredParam('username');
-            let cookieHandshake = req.getCookie('AURIA_UA_USERNAME');
-            let handshakeToken = req.getCookie('AURIA_UA_HANDSHAKE');
-            if (cookieHandshake != username) {
-                console.log("Username [" + username + "], Cookie [" + cookieHandshake + "]");
-                throw new Error("[Login] Handshake failed!");
-            }
-            let loggedIn = this.module.getSystem().getUser(username);
-            let loginPaylodToken = jwt.verify(handshakeToken, Auth_1.AuthConfig.jwtSecret, {
-                maxAge: "2d"
-            });
-            if (typeof loginPaylodToken == "string") {
-                res.error("20009", "Invalid token!");
-                return;
-            }
-            // # - Already logged in ?
-            if (loggedIn != null) {
-                let matchAuth = loggedIn.verifyLoginPayload(loginPaylodToken);
-                if (matchAuth) {
-                    res.addToResponse({
-                        handshake: true
-                    });
-                    res.send();
-                    return;
-                }
-                else {
-                    res.error("99", "Invalid Payload, please login");
-                }
-            }
-            // # - Not logged in
-            else {
-                let log = yield req.getUser().loginWithPayload(loginPaylodToken);
-                if (log) {
-                    req.getUser().buildUser();
-                    res.addToResponse({
-                        handshake: true
-                    });
-                    res.send();
-                    return;
-                }
-                else {
-                    res.error("98", "Invalid Payload, please login");
-                }
-            }
-        });
-        this.logout = (req, res) => {
-            let username = req.requiredParam("username");
+        this.logout = (req) => {
+            let loginReq = req;
+            let username = req.getRequiredParam("username");
             let cookie = req.getCookie('AURIA_UA_USERNAME');
             //let handshake = req.getCookie('AURIA_UA_HANDSHAKE');
             if (username == cookie) {
-                res.setCookie("AURIA_UA_USERNAME", "", -1, true);
-                res.setCookie("AURIA_UA_HANDSHAKE", "", -1, true);
+                loginReq.setCookie("AURIA_UA_USERNAME", "", {
+                    expires: new Date(),
+                    httpOnly: true
+                });
+                loginReq.setCookie("AURIA_UA_HANDSHAKE", "", {
+                    expires: new Date(),
+                    httpOnly: true
+                });
                 this.module.getSystem().removeUser(username);
-                res.addToResponse({ "logout": true });
+                return { "logout": true };
             }
             else {
-                res.error("20006", "Failed to log out user!");
+                throw new LogoutFailed_1.LogoutFailed("Server information does not match the request");
             }
         };
+        this.loginAttemptManager = new LoginAttemptManager_1.LoginAttemptManager();
     }
     getRequiredRequestHandlers() {
         return [];
@@ -131,4 +78,4 @@ class LoginListener extends ModuleListener_1.ModuleListener {
     }
 }
 exports.LoginListener = LoginListener;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTG9naW5MaXN0ZW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uLy4uL3NyYy9rZXJuZWwvbW9kdWxlL1N5c3RlbU1vZHVsZS9saXN0ZW5lcnMvTG9naW5MaXN0ZW5lci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7Ozs7OztBQUFBLHlEQUFpRztBQUVqRyw2REFBMEQ7QUFDMUQsa0RBQW9DO0FBQ3BDLGtEQUFxRDtBQUdyRCxNQUFhLGFBQWMsU0FBUSwrQkFBYztJQU03QyxZQUFZLE1BQWM7UUFDdEIsS0FBSyxDQUFDLE1BQU0sRUFBRSxlQUFlLENBQUMsQ0FBQztRQVk1QixVQUFLLEdBQW1CLENBQU8sR0FBRyxFQUFFLEdBQUcsRUFBRSxFQUFFO1lBRTlDLElBQUksUUFBUSxHQUFXLEdBQUcsQ0FBQyxhQUFhLENBQUMsVUFBVSxDQUFDLENBQUM7WUFFckQsc0JBQXNCO1lBQ3RCLElBQUksR0FBRyxDQUFDLFFBQVEsQ0FBQyxVQUFVLENBQUMsRUFBRTtnQkFDMUIsSUFBSSxRQUFRLEdBQUcsR0FBRyxDQUFDLGFBQWEsQ0FBQyxVQUFVLENBQUMsQ0FBQztnQkFDN0MsSUFBSSxPQUFPLEdBQ1AsTUFBTSxHQUFHLENBQUMsT0FBTyxFQUFFO3FCQUNkLGlCQUFpQixDQUFDLFFBQVEsRUFBRSxRQUFRLENBQUMsQ0FBQztnQkFFL0MsSUFBSSxPQUFPLEVBQUU7b0JBQ1QsSUFBSTt3QkFDQSxJQUFJLElBQUksR0FBRyxJQUFJLENBQUMsTUFBTSxDQUFDLFNBQVMsRUFBRSxDQUFDLE9BQU8sQ0FBQyxRQUFRLENBQWUsQ0FBQzt3QkFDbkUsSUFBSSxDQUFDLFlBQVksQ0FBQyxHQUFHLENBQUMsQ0FBQzt3QkFDdkIsSUFBSSxDQUFDLFNBQVMsRUFBRSxDQUFDO3dCQUNqQixJQUFJLFlBQVksR0FBRyxJQUFJLENBQUMsb0JBQW9CLEVBQUUsQ0FBQzt3QkFDL0MsSUFBSSxTQUFTLEdBQUcsR0FBRyxDQUFDLElBQUks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
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTG9naW5MaXN0ZW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uLy4uL3NyYy9rZXJuZWwvbW9kdWxlL1N5c3RlbU1vZHVsZS9saXN0ZW5lcnMvTG9naW5MaXN0ZW5lci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7O0FBQUEseURBQWlHO0FBTWpHLG1FQUFnRTtBQUVoRSxpRUFBOEQ7QUFDOUQscUVBQWtFO0FBR2xFLE1BQWEsYUFBYyxTQUFRLCtCQUFjO0lBUTdDLFlBQVksTUFBYztRQUN0QixLQUFLLENBQUMsTUFBTSxFQUFFLGVBQWUsQ0FBQyxDQUFDO1FBYzVCLFVBQUssR0FBbUIsQ0FBTyxHQUFHLEVBQUUsRUFBRTtZQUV6QyxJQUFJLFFBQVEsR0FBa0IsR0FBb0IsQ0FBQztZQUNuRCxJQUFJLFFBQVEsR0FBVyxHQUFHLENBQUMsZ0JBQWdCLENBQUMsVUFBVSxDQUFDLENBQUM7WUFFeEQsSUFBSSxjQUFjLEdBQUcsSUFBSSxDQUFDLG1CQUFtQixDQUFDLG1CQUFtQixDQUFDLFFBQVEsQ0FBQyxDQUFDO1lBRTVFLHNCQUFzQjtZQUN0QixJQUFJLEdBQUcsQ0FBQyxRQUFRLENBQUMsVUFBVSxDQUFDLEVBQUU7Z0JBQzFCLElBQUksUUFBUSxHQUFHLEdBQUcsQ0FBQyxnQkFBZ0IsQ0FBQyxVQUFVLENBQUMsQ0FBQztnQkFDaEQsT0FBTyxRQUFRO3FCQUNWLGlCQUFpQixDQUFDLFFBQVEsRUFBRSxRQUFRLEVBQUUsUUFBUSxDQUFDO3FCQUMvQyxJQUFJLENBQ0QsQ0FBQyxJQUFnQixFQUFFLEVBQUU7b0JBQ2pCLG9CQUFvQjtvQkFDcEIsY0FBYyxDQUFDLE9BQU8sR0FBRyxJQUFJLENBQUM7b0JBQzlCLElBQUksUUFBUSxHQUFHLElBQUksQ0FBQyxtQkFBbUIsQ0FBQyxrQkFBa0IsQ0FBQyxRQUFRLENBQUMsQ0FBQztvQkFFckUsT0FBTzt3QkFDSCxPQUFPLEVBQUUsbUJBQW1CO3dCQUM1QixRQUFRLEVBQUUsUUFBUTt3QkFDbEIsUUFBUSxFQUFFLElBQUksQ0FBQyxXQUFXLEVBQUU7d0JBQzVCLE1BQU0sRUFBRSxHQUFHLENBQUMsZUFBZSxFQUFFLENBQUMsTUFBTSxFQUFFO3FCQUN6QyxDQUFDO2dCQUNOLENBQUMsQ0FDSixDQUFDLEtBQUssQ0FBQyxDQUFDLEdBQUcsRUFBRSxFQUFFO29CQUNaLE1BQU0sR0FBRyxDQUFDO2dCQUNkLENBQUMsQ0FBQyxDQUFDO2FBQ1Y7aUJBQ0k7Z0JBQ0QsTUFBTSxJQUFJLHlCQUFXLENBQUMsaUNBQWlDLENBQUMsQ0FBQzthQUM1RDtRQUNMLENBQUMsQ0FBQSxDQUFDO1FBRUssV0FBTSxHQUFtQixDQUFDLEdBQUcsRUFBRSxFQUFFO1lBRXBDLElBQUksUUFBUSxHQUFrQixHQUFvQixDQUFDO1lBRW5ELElBQUksUUFBUSxHQUFHLEdBQUcsQ0FBQyxnQkFBZ0IsQ0FBQyxVQUFVLENBQUMsQ0FBQztZQUNoRCxJQUFJLE1BQU0sR0FBRyxHQUFHLENBQUMsU0FBUyxDQUFDLG1CQUFtQixDQUFDLENBQUM7WUFDaEQsc0RBQXNEO1lBRXRELElBQUksUUFBUSxJQUFJLE1BQU0sRUFBRTtnQkFFcEIsUUFBUSxDQUFDLFNBQVMsQ0FBQyxtQkFBbUIsRUFBRSxFQUFFLEVBQUU7b0JBQ3hDLE9BQU8sRUFBRSxJQUFJLElBQUksRUFBRTtvQkFDbkIsUUFBUSxFQUFFLElBQUk7aUJBQ2pCLENBQUMsQ0FBQztnQkFFSCxRQUFRLENBQUMsU0FBUyxDQUFDLG9CQUFvQixFQUFFLEVBQUUsRUFBRTtvQkFDekMsT0FBTyxFQUFFLElBQUksSUFBSSxFQUFFO29CQUNuQixRQUFRLEVBQUUsSUFBSTtpQkFDakIsQ0FBQyxDQUFDO2dCQUVILElBQUksQ0FBQyxNQUFNLENBQUMsU0FBUyxFQUFFLENBQUMsVUFBVSxDQUFDLFFBQVEsQ0FBQyxDQUFDO2dCQUU3QyxPQUFPLEVBQUUsUUFBUSxFQUFFLElBQUksRUFBRSxDQUFDO2FBQzdCO2lCQUFNO2dCQUNILE1BQU0sSUFBSSwyQkFBWSxDQUFDLCtDQUErQyxDQUFDLENBQUM7YUFDM0U7UUFFTCxDQUFDLENBQUM7UUF6RUUsSUFBSSxDQUFDLG1CQUFtQixHQUFHLElBQUkseUNBQW1CLEVBQUUsQ0FBQztJQUN6RCxDQUFDO0lBUk0sMEJBQTBCO1FBQzdCLE9BQU8sRUFBRSxDQUFDO0lBQ2QsQ0FBQztJQVFNLDJCQUEyQjtRQUM5QixPQUFPO1lBQ0gsT0FBTyxFQUFFLEVBQUU7WUFDWCxXQUFXLEVBQUUsRUFBRTtZQUNmLFdBQVcsRUFBRSxFQUFFO1lBQ2YsUUFBUSxFQUFFLEVBQUU7U0FDZixDQUFDO0lBQ04sQ0FBQztDQWlFSjtBQXRGRCxzQ0FzRkMifQ==

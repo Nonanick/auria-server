@@ -149,7 +149,7 @@ export declare class Column extends KernelEntity {
     setNullable(nullable: boolean): this;
     setRawType(type: SQLType): this;
     setExtra(extra: string): this;
-    getDataType(): DataType;
+    getDataType(): DataType | null;
     isPrimaryKey(): boolean;
     getDefaultValue(): string;
     isNullable(): boolean;

@@ -225,13 +225,13 @@ export class RowObject extends EventEmitter {
 
                 let conn = this.rowModel.getTable().getSystem().getSystemConnection();
 
-                conn.query(
+                conn.raw(
                     "INSERT INTO object \
                 ( `table`, `pk_field`, `table_id`, `active`, `owner`, `owner_role`, \
                 `current_version`, `next_version`, `lock_time`, `lock_user`, \
                 `created_at`, `updated_at`, `deleted_at` ) \
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    [
+                    
                         this.table,
                         this.pkField,
                         this.tableId,
@@ -244,8 +244,8 @@ export class RowObject extends EventEmitter {
                         this.lockUser,
                         new Date(this.createdAt),
                         new Date(this.updatedAt),
-                        null
-                    ]).then((res) => {
+                        "null"
+                    ).then((res) => {
                         this._id = res.insertId;
                         resolve(true);
                     }).catch((err) => {

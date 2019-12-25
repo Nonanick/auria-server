@@ -1,7 +1,7 @@
 import { System } from "../System";
 import { Table } from "./structure/table/Table";
 import { ObjectRepository } from "./object/ObjectRepository";
-import { MysqlConnection } from "./connection/MysqlConnection";
+import Knex = require("knex");
 export declare class TableManager {
     /**
      * System
@@ -14,7 +14,7 @@ export declare class TableManager {
      *
      * System connection
      */
-    protected connection: MysqlConnection;
+    protected connection: Knex;
     /**
      * Tables
      * -------

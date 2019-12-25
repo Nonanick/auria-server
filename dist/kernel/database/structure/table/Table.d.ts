@@ -6,6 +6,7 @@ import { SystemUser } from "../../../security/SystemUser";
 import { Model } from "aurialib2";
 import { RowModel } from "../rowModel/RowModel";
 import { TableAction } from "./TableAction";
+import Knex = require("knex");
 export declare class Table extends KernelEntity {
     /**
      * Name
@@ -108,8 +109,8 @@ export declare class Table extends KernelEntity {
     constructor(system: System, name: string);
     getColumns(): Promise<Map<string, Column>>;
     buildColumns(): Promise<Map<string, Column>>;
-    getTitle(langVar?: string): any;
-    getDescription(langVar?: string): any;
+    getTitle(langVar?: string): void;
+    getDescription(langVar?: string): void;
     getName(): string;
     getSystem(): System;
     /**
@@ -131,5 +132,5 @@ export declare class Table extends KernelEntity {
     buildModels(): Promise<Map<string, Model>>;
     buildModel(key: string): Promise<RowModel | null>;
     getAllModelsFromUser(user: SystemUser): Promise<Map<string, Model>>;
-    getConnection(): import("../../connection/MysqlConnection").MysqlConnection;
+    getConnection(): Knex<any, any[]>;
 }

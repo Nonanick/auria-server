@@ -1,18 +1,18 @@
 import { Module } from "./Module";
 import { Table } from "../database/structure/table/Table";
-import { AuriaRequest } from "../http/AuriaRequest";
-import { AuriaResponse } from "../http/AuriaResponse";
 import { EventEmitter } from "events";
 import { AuriaMiddleware } from "../http/AuriaMiddleware";
 import { ListenerRequest } from "../http/request/ListenerRequest";
+import { ListenerActionUnavaliable } from "../exceptions/kernel/ListenerActionUnavaliable";
+
 export type ModuleListenerEvents = "actionFinished" | "actionError" | "load";
 
-export type ListenerAction = (request : AuriaRequest, response : AuriaResponse) => void;
+export type ListenerAction = (request: ListenerRequest) => any | Promise<any>;
 
 export type ListenerRequiredPermissions = {
     tables?: {
         [tableName: string]: {
-            actions : string[];
+            actions: string[];
         };
     }
 };
@@ -23,47 +23,58 @@ export type ListenerActionsDefinition = {
 
 export abstract class ModuleListener extends EventEmitter {
 
-    protected module : Module;
+    protected module: Module;
 
-    public name : string;
+    public name: string;
 
+    protected tables: Map<string, Table>;
 
-    protected tables : Map<string, Table>;
-
-    constructor(module : Module, name : string) {
+    constructor(module: Module, name: string) {
         super();
         this.module = module;
         this.name = name;
     }
 
-    public abstract getExposedActionsDefinition() : ListenerActionsDefinition;
+    public abstract getExposedActionsDefinition(): ListenerActionsDefinition;
 
-    public abstract getRequiredRequestHandlers() : AuriaMiddleware[];
+    public abstract getRequiredRequestHandlers(): AuriaMiddleware[];
 
-    public emit(event : ModuleListenerEvents, ...args : any[]) {
+    public emit(event: ModuleListenerEvents, ...args: any[]) {
         return super.emit(event, args);
     }
 
-    public whenActionFinished( fn : () => void ) {
+    public whenActionFinished(fn: () => void) {
         let onlyOnceHandler = () => {
             fn();
-            this.removeListener("actionFinished" , onlyOnceHandler );
+            this.removeListener("actionFinished", onlyOnceHandler);
         };
 
         this.addListener("actionFinished", onlyOnceHandler);
-        
+
     }
 
     public done() {
         this.emit("actionFinished");
     }
 
-    public setTables(tables : Map<string, Table>) : ModuleListener {
+    public setTables(tables: Map<string, Table>): ModuleListener {
         this.tables = tables;
         return this;
     }
 
-    public handleRequest(request : ListenerRequest) {
+    public async handleRequest(request: ListenerRequest) {
+
+        let requestedAction: string = request.getRequestStack().action();
+
+        let actionsDefinition: ListenerActionsDefinition = this.getExposedActionsDefinition();
+
+        if (!actionsDefinition.hasOwnProperty(requestedAction)) {
+            throw new ListenerActionUnavaliable("The requested action in the listener does not exist or is not exposed!");
+        }
+
+        let actionFn : ListenerAction = (this as any)[requestedAction] as ListenerAction;
+
+        return actionFn(request);
 
     }
 

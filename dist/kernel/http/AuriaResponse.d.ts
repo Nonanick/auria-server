@@ -24,7 +24,7 @@ export declare class AuriaResponse {
     setServerVersion(version: number): AuriaResponse;
     addToResponse(data: any): void;
     send(): void;
-    getRawResponse(): Response;
+    getRawResponse(): Response<any>;
     getStatusCode(digest: RequestDigestStatus): number;
     isSent(): boolean;
     getSendData(): AuriaResponseData;

@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { Module } from "../Module";
 
-export class ModulePage extends EventEmitter{
+export class ModulePage extends EventEmitter {
 
     private module : Module;
 

@@ -1,11 +1,18 @@
 import { ModuleListener, ListenerAction, ListenerActionsDefinition } from "../../ModuleListener";
 import { Module } from "../../Module";
-import { SystemUser } from "../../../security/SystemUser";
 import * as jwt from 'jsonwebtoken';
 import { AuthConfig } from '../../../../config/Auth';
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+import { LoginRequest } from "../requests/LoginRequest";
+import { LogoutFailed } from "../exceptions/login/LogoutFailed";
+import { HandshakeFailed } from "../exceptions/login/HandshakeFailed";
+import { LoginFailed } from "../exceptions/login/LoginFailed";
+import { LoginAttemptManager } from "./login/LoginAttemptManager";
+import { SystemUser } from "../../../security/SystemUser";
 
 export class LoginListener extends ModuleListener {
+
+    protected loginAttemptManager: LoginAttemptManager;
 
     public getRequiredRequestHandlers(): AuriaMiddleware[] {
         return [];
@@ -13,6 +20,8 @@ export class LoginListener extends ModuleListener {
 
     constructor(module: Module) {
         super(module, "LoginListener");
+
+        this.loginAttemptManager = new LoginAttemptManager();
     }
 
     public getExposedActionsDefinition(): ListenerActionsDefinition {
@@ -24,113 +33,65 @@ export class LoginListener extends ModuleListener {
         };
     }
 
-    public login: ListenerAction = async (req, res) => {
+    public login: ListenerAction = async (req) => {
 
-        let username: string = req.requiredParam('username');
+        let loginReq: LoginRequest = (req as LoginRequest);
+        let username: string = req.getRequiredParam('username');
+
+        let currentAttempt = this.loginAttemptManager.requestLoginAttempt(loginReq);
 
         // Login with password
         if (req.hasParam('password')) {
-            let password = req.requiredParam('password');
-            let success: boolean =
-                await req.getUser()
-                    .loginWithPassword(username, password);
+            let password = req.getRequiredParam('password');
+            return loginReq
+                .loginWithPassword(username, password, loginReq)
+                .then(
+                    (user: SystemUser) => {
+                        // Login successfull
+                        currentAttempt.success = true;
+                        let attempts = this.loginAttemptManager.clearLoginAttempts(loginReq);
 
-            if (success) {
-                try {
-                    let user = this.module.getSystem().getUser(username) as SystemUser;
-                    user.startSession(req);
-                    user.buildUser();
-                    let tokenPayload = user.generateTokenPayload();
-                    let jwtString = jwt.sign(tokenPayload, AuthConfig.jwtSecret, {
-                        expiresIn: 60 * 60 * 24
-                    });
-
-                    res.setCookie(SystemUser.COOKIE_HANDSHAKE, jwtString);
-                    res.setCookie(SystemUser.COOKIE_USERNAME, username);
-
-                    res.addToResponse({
-                        loggedIn: true
-                    });
-                    res.send();
-
-                } catch (error) {
-                    res.error("20001", "Failed to locate user!");
-                }
-            } else {
-                res.error("20002", "Login attempt failed!");
-            }
-
+                        return {
+                            message: "Login Successful!",
+                            attempts: attempts,
+                            username: user.getUsername(),
+                            system: req.getRequestStack().system()
+                        };
+                    }
+                ).catch((err) => {
+                    throw err;
+                });
         }
         else {
-            throw new Error("[Login] Insufficient parameters were passed!");
+            throw new LoginFailed("Insufficient parameters passed!");
         }
     };
 
-    public handshake: ListenerAction = async (req, res) => {
+    public logout: ListenerAction = (req) => {
 
-        let username: string = req.requiredParam('username');
-        let cookieHandshake: string = req.getCookie('AURIA_UA_USERNAME');
-        let handshakeToken: string = req.getCookie('AURIA_UA_HANDSHAKE');
+        let loginReq: LoginRequest = (req as LoginRequest);
 
-        if (cookieHandshake != username) {
-            console.log("Username [" + username + "], Cookie [" + cookieHandshake + "]");
-            throw new Error("[Login] Handshake failed!");
-        }
-
-        let loggedIn = this.module.getSystem().getUser(username);
-        let loginPaylodToken = jwt.verify(handshakeToken, AuthConfig.jwtSecret, {
-            maxAge: "2d"
-        }) as any;
-
-        if (typeof loginPaylodToken == "string") {
-            res.error("20009", "Invalid token!");
-            return;
-        }
-
-        // # - Already logged in ?
-        if (loggedIn != null) {
-            let matchAuth = loggedIn.verifyLoginPayload(loginPaylodToken);
-            if (matchAuth) {
-                res.addToResponse({
-                    handshake: true
-                });
-                res.send();
-                return;
-            } else {
-                res.error("99","Invalid Payload, please login");
-            }
-        }
-        // # - Not logged in
-        else {
-            let log = await req.getUser().loginWithPayload(loginPaylodToken);
-            if (log) {
-                req.getUser().buildUser();
-                res.addToResponse({
-                    handshake: true
-                });
-                res.send();
-                return;
-            } else {
-                res.error("98","Invalid Payload, please login");
-            }
-        }
-    };
-
-    public logout: ListenerAction = (req, res) => {
-
-        let username = req.requiredParam("username");
+        let username = req.getRequiredParam("username");
         let cookie = req.getCookie('AURIA_UA_USERNAME');
         //let handshake = req.getCookie('AURIA_UA_HANDSHAKE');
 
         if (username == cookie) {
-            res.setCookie("AURIA_UA_USERNAME", "", -1, true);
-            res.setCookie("AURIA_UA_HANDSHAKE", "", -1, true);
+
+            loginReq.setCookie("AURIA_UA_USERNAME", "", {
+                expires: new Date(),
+                httpOnly: true
+            });
+
+            loginReq.setCookie("AURIA_UA_HANDSHAKE", "", {
+                expires: new Date(),
+                httpOnly: true
+            });
 
             this.module.getSystem().removeUser(username);
 
-            res.addToResponse({ "logout": true });
+            return { "logout": true };
         } else {
-            res.error("20006", "Failed to log out user!");
+            throw new LogoutFailed("Server information does not match the request");
         }
 
     };

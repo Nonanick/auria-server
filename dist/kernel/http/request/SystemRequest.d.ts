@@ -1,7 +1,7 @@
-import { Request } from 'express-serve-static-core';
 import { System } from '../../System';
 import { RequestStack } from '../../RequestStack';
-export interface SystemRequest extends Request {
+import { ServerRequest } from './ServerRequest';
+export interface SystemRequest extends ServerRequest {
     /**
      * [GET] System
      * -------------
@@ -32,6 +32,23 @@ export interface SystemRequest extends Request {
      */
     getRequestStack: () => RequestStack;
 }
+/**
+ * [FACTORY] System Request
+ * -------------------------
+ *
+ * Factory function, will produce SystemRequest based on the
+ * > *Express **Request** object* + **System** + **RequestStack**
+ *
+ */
+export declare type SystemRequestFactoryFunction = (request: ServerRequest, system: System, stack: RequestStack) => SystemRequest;
 export declare class SystemRequestFactory {
-    static make(request: Request, system: System, stack: RequestStack): SystemRequest;
+    /**
+     * Factory function to be used to generate a SystemRequest
+     * based on a Express Request object, the system that will
+     * be handling the request
+     *
+     */
+    private factoryFn;
+    setFactoryFunction(fn: SystemRequestFactoryFunction): void;
+    make(request: ServerRequest, system: System, stack: RequestStack): SystemRequest;
 }

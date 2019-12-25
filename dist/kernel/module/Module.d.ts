@@ -1,6 +1,8 @@
 import { System } from "../System";
 import { ModuleListener } from "./ModuleListener";
 import { SystemUser } from "../security/SystemUser";
+import { ModuleRequest } from "../http/request/ModuleRequest";
+import { Response } from "express-serve-static-core";
 export declare abstract class Module {
     /**
      * Name
@@ -99,6 +101,7 @@ export declare abstract class Module {
     getTable(user: SystemUser, table: string): void;
     protected abstract loadTranslations(): TranslationsByLang;
     getTranslations(): TranslationsByLang;
+    handleRequest(request: ModuleRequest, response: Response): Promise<any>;
 }
 export declare type TranslationsByLang = {
     [lang: string]: {

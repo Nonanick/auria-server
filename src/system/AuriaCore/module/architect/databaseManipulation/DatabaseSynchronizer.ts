@@ -1,7 +1,7 @@
 import { System } from "../../../../../kernel/System";
-import { AuriaConnection } from "../../../../../kernel/database/connection/AuriaConnection";
 import { TableCompareResult } from "./TableCompareResult";
 import { Table } from "../../../../../kernel/database/structure/table/Table";
+import Knex = require("knex");
 
 export class DatabaseSychronizer {
 
@@ -16,11 +16,11 @@ export class DatabaseSychronizer {
      * ----------
      * 
      */
-    private connection: AuriaConnection;
+    private connection: Knex;
 
     private showTablesPromise: Promise<string[]>;
 
-    constructor(system: System, connection: AuriaConnection) {
+    constructor(system: System, connection: Knex) {
         this.system = system;
         this.connection = connection;
     }
@@ -47,7 +47,7 @@ export class DatabaseSychronizer {
      */
     public renewTablesFromConnection(): Promise<string[]> {
         this.showTablesPromise = this.connection
-            .query("SHOW TABLES", [])
+            .raw("SHOW TABLES")
             .then(tableRes => {
 
                 let ret: string[] = [];

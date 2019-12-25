@@ -2,8 +2,8 @@ import { System } from "../System";
 import { Table } from "./structure/table/Table";
 import { TableRowData } from "./structure/table/TableRowData";
 import { ObjectRepository } from "./object/ObjectRepository";
-import { MysqlConnection } from "./connection/MysqlConnection";
 import { RowModel } from "./structure/rowModel/RowModel";
+import Knex = require("knex");
 
 export class TableManager {
 
@@ -19,7 +19,7 @@ export class TableManager {
      * 
      * System connection
      */
-    protected connection: MysqlConnection;
+    protected connection: Knex;
 
     /**
      * Tables
@@ -78,34 +78,31 @@ export class TableManager {
                 resolve: (value: Map<string, Table>) => void,
                 reject: (reason: any) => void
             ) => {
-                this.connection.query(
-                    "SELECT \
-                        name, title, description, connection_id, `table`, descriptive_column, distinctive_column \
-                        FROM `table`",
-                    []
-                ).then((res) => {
-                    let map = new Map<string, Table>();
+                this.connection.select("name", "title", "description", "connection_id", "table", "descriptive_column", "distinctive_column")
+                    .from("table")
+                    .then((res) => {
+                        let map = new Map<string, Table>();
 
-                    (res as TableRowData[]).forEach((tb) => {
+                        (res as TableRowData[]).forEach((tb) => {
 
-                        let table = new Table(this.system, tb.name);
+                            let table = new Table(this.system, tb.name);
 
-                        table.connectionId = tb.connection_id;
-                        table.table = tb.table;
-                        table.title = tb.title;
-                        table.descriptiveColumn = tb.descriptive_column;
-                        table.description = tb.description;
-                        table.distinctiveColumn = tb.distinctive_column;
+                            table.connectionId = tb.connection_id;
+                            table.table = tb.table;
+                            table.title = tb.title;
+                            table.descriptiveColumn = tb.descriptive_column;
+                            table.description = tb.description;
+                            table.distinctiveColumn = tb.distinctive_column;
 
-                        table.buildColumns();
+                            table.buildColumns();
 
-                        map.set(table.getName(), table);
+                            map.set(table.getName(), table);
+                        });
+
+                        resolve(map);
+                    }).catch((err) => {
+                        reject("SQL Error: " + err.message);
                     });
-
-                    resolve(map);
-                }).catch((err) => {
-                    reject("SQL Error: " + err.message);
-                });
             });
 
         this.buildTablesPromise = promise;

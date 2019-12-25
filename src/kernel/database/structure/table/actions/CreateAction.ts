@@ -33,8 +33,8 @@ export class CreateAction extends TableAction {
                         let queryString: string =
                             " INSERT INTO " + this.table.table +
                             " (" + colNames.map(v => { return "`" + v + "`"; }).join(",") + ") " +
-                            " VALUES (" + questionArr.join(',') + ")";
-                        conn.query(
+                            " VALUES (?)";
+                        conn.raw(
                             queryString,
                             values
                         ).then( (res : SQLInsertResult) => {

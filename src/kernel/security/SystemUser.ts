@@ -1,13 +1,11 @@
+import { User } from "aurialib2";
 import { Table } from "../database/structure/table/Table";
 import { System } from "../System";
-import { AuriaRequest } from "../http/AuriaRequest";
-import * as bcrypt from 'bcrypt';
 import { UserRole } from "./UserRole";
-import { Auria_ENV } from "../../AuriaServer";
-import { User } from "aurialib2";
 import { DataPermission } from "./permission/DataPermission";
-import * as jwt from 'jsonwebtoken';
-import { AuthConfig } from "../../config/Auth";
+import { LoginRequest } from "../module/SystemModule/requests/LoginRequest";
+import { ParameterAlreadyInitialized } from "../exceptions/ParameterAlreadyInitialized";
+
 
 export class SystemUser extends User {
 
@@ -102,18 +100,6 @@ export class SystemUser extends User {
      */
     protected randomSalt: number;
 
-    /**
-     * Handshake Token
-     * ---------------
-     * 
-     * "Keep me logged in" token, used to retrieve a transaction token
-     * without the users password, valid until the server restarts!
-     * 
-     * # In 'dev' it does not uses the server version therefore can be used
-     * between server restarts
-     */
-    private handshakeToken: string;
-
     private roles: UserRole[];
 
     private canAccessRoles: UserRole[];
@@ -158,6 +144,7 @@ export class SystemUser extends User {
         this.system = system;
 
         this.trackingModels = new Map();
+
         this.userTables = new Map();
         this.roles = [];
         this.canAccessRoles = [];
@@ -211,17 +198,21 @@ export class SystemUser extends User {
         return this.username;
     }
 
-    public startSession(request: AuriaRequest): void {
-        this.loginTime = Date.now();
-        this.ip = request.getIp();
-        this.userAgent = request.getUserAgent() as string;
+    public startSession(request: LoginRequest): void {
+        if (this.loginTime == null) {
+            this.loginTime = Date.now();
+            this.ip = request.getIp();
+            this.userAgent = request.getUserAgent();
+        } else {
+            throw new ParameterAlreadyInitialized("User session already started!")
+        }
     }
 
     public buildUser() {
         this.buildUserRoles()
             .then(([userHiredRoles, userAccessRoles]) => {
                 console.log(
-                    "[SystemUser] User loggd in and have this roles:",
+                    "[SystemUser] User logged in and have this roles:",
                     userHiredRoles,
                     "\nBut also hav access to this roles:",
                     userAccessRoles
@@ -247,15 +238,12 @@ export class SystemUser extends User {
             .then(_ => {
                 let conn = this.system.getSystemConnection();
 
-                return conn.query(
-                    "SELECT \
-                    user_roles._id as hire_id, user_roles.role_id, user_roles.description as hire_description, \
-                    role.name, role.title as role_title, role.description as role_description, role.icon \
-                    FROM user_roles \
-                    LEFT JOIN role \
-                    ON role._id = user_roles.role_id  \
-                    WHERE username=? ",
-                    [this.username]);
+                return conn.select(
+                    "user_roles._id as hire_id", "user_roles.role_id", "user_roles.description as hire_description",
+                    "role.name", "role.title as role_title", "role.description as role_description", "role.icon")
+                    .from("user_roles")
+                    .leftJoin("role", "role._id", "user_roles.role_id")
+                    .where("username", this.username);
             });
     }
 
@@ -297,7 +285,7 @@ export class SystemUser extends User {
             if (val != null)
                 rolesId.push(val.getId());
         });
-        return conn.query(accessRolesQuery, [rolesId]);
+        return conn.raw(accessRolesQuery);
     }
 
     private async buildUserAcessibleRolesFromQuery(queryResult: any): Promise<[UserRole[], UserRole[]]> {
@@ -373,11 +361,10 @@ export class SystemUser extends User {
         if (this.buildUserInfoPromise == null) {
             this.buildUserInfoPromise = new Promise((resolve, reject) => {
                 let conn = this.system.getSystemConnection();
-                conn.query(
-                    "SELECT \
-                    firstname, lastname, treatment, phone, birth, avatar \
-                    FROM users_info \
-                    WHERE user_id=?", [this._id])
+                conn.select(
+                    "firstname", "lastname", "treatment", "phone", "birth", "avatar")
+                    .from("users_info")
+                    .where("user_id", this._id)
                     .then((res) => {
                         if (Array.isArray(res)) {
                             if (res.length == 1) {
@@ -396,68 +383,12 @@ export class SystemUser extends User {
         return this.buildUserInfoPromise;
     }
 
-    public async getHandshakeToken(renew?: boolean): Promise<string> {
-
-        if (this.handshakeToken == null || renew === true) {
-            this.handshakeToken = await this.renewToken();
-        }
-
-        return this.handshakeToken;
-
-    }
-
-    public async getTransactionToken(renew?: boolean) {
-
-        if (this.transactionToken == null || renew === true) {
-            this.transactionToken = await this.renewToken();
-        }
-
-        return this.transactionToken;
-    }
-
-    public generateTokenPayload(): LoginPayload {
-        return {
-            username: this.username,
-            userAgent: this.userAgent,
-            ip: this.ip,
-            loginTime: this.loginTime,
-        };
-    }
-    /**
-     * Generate a new toke based on the user info
-     *  
-     * @param randomSalt User random salt to generate the token
-     */
-    private renewToken(randomSalt?: boolean): Promise<string> {
-
-        let tokenHash =
-            // Make sure its the same user    
-            this.username +
-            // Validate "same origin"
-            this.ip + this.userAgent;
-        // Validate "same server session"
-        this.system.getSystemVersion();
-
-        // Use a random salt
-        if (randomSalt === true && Auria_ENV != "development") {
-            this.randomSalt = Math.random() * 10000;
-            tokenHash += randomSalt;
-        }
-
-        let promise = new Promise<string>((resolve, reject) => {
-            bcrypt.hash(tokenHash, 10).then((hash) => {
-                resolve(hash);
-            }).catch((error) => {
-                console.error("[SystemUser] Failed to create token!", error);
-                reject("[SystemUser] Failed to renew hash");
-            });
-        });
-
-        return promise;
-    }
-
     public setSystem(system: System) {
-        this.system = system;
+        if (this.system == null)
+            this.system = system;
+        else
+            throw new ParameterAlreadyInitialized("User's System has already been set!");
+
         return this;
     }
 
@@ -479,6 +410,10 @@ export class SystemUser extends User {
 
     public getId(): number {
         return this._id;
+    }
+
+    public getLoginTime() {
+        return this.loginTime;
     }
 
     public async getUserRoles(): Promise<UserRole[]> {
@@ -503,115 +438,6 @@ export class SystemUser extends User {
         return this.canAccessRoles.map((v) => {
             return v.getId();
         });
-    }
-
-    public async validateHandshake(request: AuriaRequest, handshake: string): Promise<boolean> {
-
-        let payload = jwt.verify(handshake, AuthConfig.jwtSecret) as LoginPayload;
-        if (
-            request.getUserAgent() == payload.userAgent
-            && request.getIp() == payload.ip
-            && payload.loginTime + 1000 * 60 * 60 * 24 * 2 > Date.now()
-        ) {
-            return true;
-        }
-
-        console.log("[SystemUser] Invalid payload!", payload);
-
-        return false;
-    }
-
-    /**
-     * Login with Password
-     * --------------------
-     * 
-     * Tries to login this user using the provided username
-     * + password, if this succeeds this user will no longer be
-     * a "guest" and will be able to access the system as a logged 
-     * user
-     * 
-     * @param username 
-     * @param password 
-     */
-    public async loginWithPassword(username: string, password: string): Promise<boolean> {
-
-        let promise = Promise.resolve()
-            .then(() => {
-                let conn = this.system.getSystemConnection();
-                return conn.query("SELECT _id, password, user_type FROM users WHERE username=?", [username]);
-            })
-            .then(async (results: UserLoginWithPassword[]) => {
-                if (results.length === 1) {
-                    let u = results[0];
-                    let success = await bcrypt.compare(password, u.password);
-                    if (success) {
-                        // # - Add User to System
-                        this.username = username;
-                        this.setAccessLevel(u.user_type);
-                        this.setId(u._id);
-                        this.system.addUser(this);
-                        return true;
-                    } else {
-                        console.log("Failed to authenticate user " + username + " hash should be: ");
-                        bcrypt.hash(password, 10, (err, hash) => {
-                            console.log("Gen Hash: ", hash);
-                        });
-                        return false;
-                    }
-                } else {
-                    throw new Error("[Login] Failed to pinpoint user in the database!");
-                }
-            });
-
-        promise.catch((err) => {
-            console.error("[Login] Failed to search for the user in the database!\n" + err);
-        });
-
-        return promise;
-    }
-
-    public async loginWithPayload(payload: LoginPayload) {
-        if (payload.userAgent == this.userAgent && payload.ip == this.ip) {
-            this.loginTime = payload.loginTime;
-            this.username = payload.username;
-            return Promise.resolve()
-                .then(_ => {
-                    return this.system.getSystemConnection()
-                        .query("SELECT _id, user_type FROM users WHERE username=?", [this.username]);
-                })
-                .then(res => {
-                    if (res.length != 1)
-                        throw new Error("Failed to locate user in database");
-                    return res[0];
-                })
-                .then(user => {
-                    this.setAccessLevel(user['user_type'])
-                        .setId(user['_id']);
-                    this.system.addUser(this);
-                    return true;
-                });
-        } else {
-            throw new Error("[SystemUser] Invalid payload, cannot login user!");
-        }
-
-
-    }
-
-    public verifyLoginPayload(payload: LoginPayload): boolean {
-        if (
-            this.username === payload.username
-            && this.userAgent === payload.userAgent
-            && this.ip === payload.ip
-        ) {
-            if (payload.loginTime + SystemUser.SESSION_EXPIRE_TIME < Date.now()) {
-                console.error("[SystemUser] Session expired!");
-                return false;
-            }
-            return true;
-        } else {
-            console.error("[SystemUser] Invalid payload, does not match with logged user", payload);
-            return false;
-        }
     }
 
     public logout() {
@@ -646,11 +472,6 @@ type UserAcessibleRowData = {
     parent_role: number | null;
 };
 
-type UserLoginWithPassword = {
-    _id: number;
-    password: string;
-    user_type: number;
-};
 
 type UserInformationData = {
     firstname: string;

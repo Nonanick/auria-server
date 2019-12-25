@@ -43,12 +43,12 @@ export class TableManagerListener extends ModuleListener {
         return this.dbSync.get(conn)!;
     }
 
-    public situation: ListenerAction = (req, res) => {
+    public situation: ListenerAction = (req) => {
 
-        let table = req.requiredParam("table");
-        let user = req.getUser();
+        //let table = req.requiredParam("table");
+        //let user = req.getUser();
 
-        this.module.getTable(user, table)
+        /*this.module.getTable(user, table)
             .then(tableO => {
                 let dbSync = this.getDatabaseSynchronizer(1);
                 return dbSync.compareAuriaTable(tableO);
@@ -59,15 +59,15 @@ export class TableManagerListener extends ModuleListener {
             .then(ansJson => {
                 res.addToResponse(ansJson);
                 res.send();
-            });
+            });*/
     };
 
-    public databaseSync: ListenerAction = (req, res) => {
+    public databaseSync: ListenerAction = (req) => {
 
-        let tableName = req.requiredParam("table");
-        let user = req.getUser();
+        //let tableName = req.requiredParam("table");
+        //let user = req.getUser();
 
-        this.module
+        /*this.module
             .getTable(user, tableName)
             .then(async (table: Table) => {
                 let conn = table.getConnection();
@@ -85,11 +85,11 @@ export class TableManagerListener extends ModuleListener {
             .catch((err: any) => {
                 console.error("[Architect.TableManager] Failed to fetch table from parameter!", err);
                 res.error("", "User can't access this table!");
-            });
+            });*/
 
     };
 
-    private syncComparissonWithAuria(user: SystemUser, table: Table, comparisson: ColumnComparisson) {
+    protected syncComparissonWithAuria(user: SystemUser, table: Table, comparisson: ColumnComparisson) {
         switch (comparisson.status) {
             case 'new':
                 this.createColumnFromComparisson(user, table, comparisson);
@@ -202,15 +202,15 @@ export class TableManagerListener extends ModuleListener {
 
     }
 
-    private async syncColumnWithComparisson(user: SystemUser, table: Table, comparisson: ColumnComparisson) {
+    protected async syncColumnWithComparisson(user: SystemUser, table: Table, comparisson: ColumnComparisson) {
 
     }
 
-    private async fetchTableDescription(conn: AuriaConnection, table: string) {
+    protected async fetchTableDescription(conn: AuriaConnection, table: string) {
         return conn.query("DESCRIBE `" + table + "`", []);
     }
 
-    private compareColumnDescripion(description: DescribeTableResult, table: Table): ColumnComparisson {
+    protected compareColumnDescripion(description: DescribeTableResult, table: Table): ColumnComparisson {
 
         if (table.hasColumn(description.Field)) {
 

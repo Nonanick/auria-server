@@ -103,9 +103,8 @@ export class RowModel extends Model {
                         " INSERT INTO " + this.table.table +
                         " (" + colNames.map(v => { return "`" + v + "`"; }).join(",") + ") " +
                         " VALUES (" + questionArr.join(',') + ")";
-                    conn.query(
-                        queryString,
-                        values
+                    conn.raw(
+                        queryString
                     ).then((res) => {
                         //this.objectEquivalent.setOwner(user);
                         this.rowModelId = res.insertId;
@@ -155,8 +154,8 @@ export class RowModel extends Model {
 
                     console.log("[RowModel] Update query: ", queryString);
 
-                    conn.query(
-                        queryString, colValue
+                    conn.raw(
+                        queryString
                     ).then((res) => {
                         console.log("[RowModel] Update result: ", res);
                         this.emit("update", { changedAttr: changedAttr });
@@ -275,8 +274,9 @@ export class RowModel extends Model {
                     table: this.table,
                     column: column as Column
                 };
-                let value = dataType.parseValueToDatabase(rawValue, context);
-                attrsOrName[attr] = value;
+                //let value = dataType.parseValueToDatabase(rawValue, context);
+                attrsOrName[attr] = rawValue;
+                console.log(context, dataType);
             }
         }
 

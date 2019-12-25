@@ -1,13 +1,16 @@
 import { System } from "../../kernel/System";
 import { Module } from "../../kernel/module/Module";
-import { MysqlConnection } from "../../kernel/database/connection/MysqlConnection";
 import { AccessManager } from "../../kernel/security/AccessManager";
-import { AuriaServer } from "../../AuriaServer";
+import Knex = require("knex");
 
 export class Este extends System {
 
-    constructor(server : AuriaServer) {
-        super(server, "Este");
+    public getAuthenticator(): import("../../kernel/security/auth/SystemAuthenticator").SystemAuthenticator {
+        throw new Error("Method not implemented.");
+    }
+
+    constructor() {
+        super("Este");
     }
 
     protected buildSystemModules(): Map<string, Module> {
@@ -18,11 +21,11 @@ export class Este extends System {
         throw new Error("Method not implemented.");
     }
     
-    protected buildSystemConnection(): MysqlConnection {
+    protected buildSystemConnection(): Knex {
         throw new Error("Method not implemented.");
     }
 
-    public getSystemConnection(): MysqlConnection {
+    public getSystemConnection(): Knex {
         throw new Error("Method not implemented.");
     }
 

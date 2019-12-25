@@ -1,6 +1,6 @@
-import { SystemRequest } from "./SystemRequest";
 import { ModuleListener } from "../../module/ModuleListener";
-export interface ListenerRequest extends SystemRequest {
+import { ModuleRequest } from "./ModuleRequest";
+export interface ListenerRequest extends ModuleRequest {
     getTranslations(lang: string): {
         [translationKey: string]: string;
     };
@@ -8,5 +8,5 @@ export interface ListenerRequest extends SystemRequest {
     getListenerName(): string;
 }
 export declare class ListenerRequestFactory {
-    static make(request: SystemRequest, listener: ModuleListener): ListenerRequest;
+    static make(request: ModuleRequest, listener: ModuleListener): ListenerRequest;
 }

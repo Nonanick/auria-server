@@ -86,20 +86,18 @@ export class ModuleManager {
 
         let conn = this.system.getSystemConnection();
 
-        conn.query(
-            "SELECT \
-                name, title, description, color, icon \
-            FROM module \
-            WHERE `active`=?", [1],
-        ).then((result) => {
-            (result as ModuleRowData[]).forEach((modData: ModuleRowData) => {
-                let dbMod = new DatabaseModule(this.system, modData.name);
-                dbMod.setRowInfo(modData);
-                this.addModule(dbMod);
-            });
+        conn.select("name", "title", "description", "color", "icon")
+            .from("module")
+            .where("active", "1")
+            .then((result) => {
+                (result as ModuleRowData[]).forEach((modData: ModuleRowData) => {
+                    let dbMod = new DatabaseModule(this.system, modData.name);
+                    dbMod.setRowInfo(modData);
+                    this.addModule(dbMod);
+                });
 
-        }).catch((err) => {
-            throw new Error("[ModuleManager] SQL Error: Failed o fetch database modules!\n" + err.message);
-        });
+            }).catch((err) => {
+                throw new Error("[ModuleManager] SQL Error: Failed o fetch database modules!\n" + err.message);
+            });
     }
 }

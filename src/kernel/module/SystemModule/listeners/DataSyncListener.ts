@@ -2,12 +2,11 @@ import { ModuleListener, ListenerAction } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
-import { Model } from "aurialib2";
 import { Table } from "../../../database/structure/table/Table";
 import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
 
-type RowSaveInfoData = {
+export type RowSaveInfoData = {
     id: any;
     values: any;
 };
@@ -108,12 +107,12 @@ export class DataSyncListener extends ModuleListener {
      * >> browsers limit the aout of keep-alive connections
      * >> made to a server!
      */
-    public listen: ListenerAction = async (req, res) => {
+    public listen: ListenerAction = async (req) => {
 
         //# - Table : Required
-        let table: string = req.requiredParam('table');
+        //let table: string = req.requiredParam('table');
 
-        this.module.getTable(req.getUser(), table)
+        /*this.module.getTable(req.getUser(), table)
             //Check for tables avaliable to the user
             .then((table) => {
                 if (table != null) {
@@ -145,7 +144,7 @@ export class DataSyncListener extends ModuleListener {
                     "\nError: ", err
                 );
                 res.error("500002", "[DataSync] Failed to fetch tables from user!");
-            });
+            });*/
 
     };
 
@@ -163,7 +162,7 @@ export class DataSyncListener extends ModuleListener {
      * @param response 
      * @param table 
      */
-    private attachListenersToTable(response: AuriaEventResponse, table: Table) {
+    protected attachListenersToTable(response: AuriaEventResponse, table: Table) {
 
         let fnOfResponse: any = {
             // # - Model updated
@@ -212,7 +211,7 @@ export class DataSyncListener extends ModuleListener {
      * @param response 
      * @param table 
      */
-    private detachListenersOfTable(response: AuriaEventResponse, table: Table) {
+    protected detachListenersOfTable(response: AuriaEventResponse, table: Table) {
         if (this.listenersOfResponse.has(response)) {
             let listeners: any = this.listenersOfResponse.get(response);
             for (var event in listeners) {
@@ -228,7 +227,7 @@ export class DataSyncListener extends ModuleListener {
      * ------------------
      * 
      */
-    public fetch: ListenerAction = (req, res) => {
+    public fetch: ListenerAction = (req) => {
 
         throw new Error("Not implemented yet");
         /*
@@ -302,12 +301,12 @@ export class DataSyncListener extends ModuleListener {
      * 
      */
 
-    public save: ListenerAction = (req, res) => {
+    public save: ListenerAction = (req) => {
         // # - Table, required
-        let tableName = req.requiredParam("table");
+       // let tableName = req.requiredParam("table");
 
         // # Try to load page
-        this.module.getTable(req.getUser(), tableName).then(async (table) => {
+       /* this.module.getTable(req.getUser(), tableName).then(async (table) => {
             // Not null?
             if (table != null) {
 
@@ -367,14 +366,14 @@ export class DataSyncListener extends ModuleListener {
         }).catch((err) => {
             console.error("[DataSync] Failed to retrieve table: ", err);
             res.error("30006", "Can't reach requested table!");
-        });
+        });*/
     };
 
-    public delete: ListenerAction = (req, res) => {
-        let tableName = req.requiredParam('table');
-        let rowId = req.requiredParam('id');
+    public delete: ListenerAction = (req) => {
+        //let tableName = req.requiredParam('table');
+        //let rowId = req.requiredParam('id');
 
-        this.module.getTable(req.getUser(), tableName).then(async (table) => {
+       /* this.module.getTable(req.getUser(), tableName).then(async (table) => {
             if (table != null) {
                 let model = await table.buildModel(rowId);
                 if (model != null) {
@@ -394,6 +393,6 @@ export class DataSyncListener extends ModuleListener {
             } else {
                 res.error("500012", "Failed to find table, do you have access to it?");
             }
-        });
+        });*/
     };
 }

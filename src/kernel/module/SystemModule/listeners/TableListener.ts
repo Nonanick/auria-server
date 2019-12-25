@@ -1,6 +1,5 @@
 import { ModuleListener, ListenerAction, ListenerActionsDefinition } from "../../ModuleListener";
 import { Module } from "../../Module";
-import { Column } from "../../../database/structure/column/Column";
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
 
 export class TableListener extends ModuleListener {
@@ -20,12 +19,12 @@ export class TableListener extends ModuleListener {
         };
     }
 
-    public metadata: ListenerAction = async (req, res) => {
+    public metadata: ListenerAction = async (req) => {
 
-        let tables = req.requiredParam('tables') as string[];
+       // let tables = req.requiredParam('tables') as string[];
         let tablesInfo: any = {};
 
-        try {
+       /* try {
             for (let a = 0; a < tables.length; a++) {
 
                 let tableObj = await this.module.getTable(req.getUser(), tables[a]);
@@ -44,10 +43,11 @@ export class TableListener extends ModuleListener {
                 }
             };
         } catch (error) {
+           
             throw new Error("[Table] Failed to fetch table info! " + error);
-        }
-        res.addToResponse({ tables: tablesInfo });
-        res.send();
+        }*/
+        return { tables: tablesInfo };
+        
     };
 
 }

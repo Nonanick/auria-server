@@ -1,14 +1,17 @@
 import { System } from "../../kernel/System";
 import { CoreAccessManager } from "./security/CoreAccessManager";
-import { AuriaServer } from "../../AuriaServer";
 import { Module } from "../../kernel/module/Module";
-import { MysqlConnection } from "../../kernel/database/connection/MysqlConnection";
+import { SystemAuthenticator } from "../../kernel/security/auth/SystemAuthenticator";
+import { CoreAuthenticator } from "./security/CoreAuthenticator";
+import Knex = require("knex");
 export declare class AuriaCoreSystem extends System {
     protected accessManager: CoreAccessManager;
-    constructor(server: AuriaServer);
+    protected authenticator: CoreAuthenticator;
+    constructor();
     protected buildSystemModules(): Map<string, Module>;
     getSystemModules(): Map<string, Module>;
-    protected buildSystemConnection(): MysqlConnection;
-    getSystemConnection(): MysqlConnection;
+    protected buildSystemConnection(): Knex;
+    getSystemConnection(): Knex;
     getSystemAccessManager(): CoreAccessManager;
+    getAuthenticator(): SystemAuthenticator;
 }

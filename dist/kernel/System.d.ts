@@ -1,14 +1,14 @@
-import { AccessManager } from "./security/AccessManager";
-import { SystemUser } from "./security/SystemUser";
-import { AuriaServer } from "../AuriaServer";
+import { Response, NextFunction } from "express-serve-static-core";
+import { SystemRequest, SystemRequestFactory } from "./http/request/SystemRequest";
+import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
 import { ModuleManager } from "./module/ModuleManager";
 import { Module } from "./module/Module";
-import { MysqlConnection } from "./database/connection/MysqlConnection";
-import { DataType } from "./database/structure/dataType/DataType";
+import { RequestStack } from "./RequestStack";
+import { SystemUser } from "./security/SystemUser";
 import { DataSteward } from "aurialib2";
-import { SystemRequest } from "./http/request/SystemRequest";
-import { Response, NextFunction } from "express-serve-static-core";
-import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
+import knex from 'knex';
+import { ServerRequest } from "./http/request/ServerRequest";
+import { LoginRequest } from "./module/SystemModule/requests/LoginRequest";
 export declare const DEFAULT_LANG = "en";
 export declare const DEFAULT_LANG_VARIATION = "us";
 export declare abstract class System {
@@ -28,10 +28,6 @@ export declare abstract class System {
      */
     protected systemVersion: number;
     /**
-     * Server instance
-     */
-    protected server: AuriaServer;
-    /**
      * Module manager
      *
      * Hold all the modules from this system merging database parameters
@@ -43,7 +39,7 @@ export declare abstract class System {
      * ------------------
      *
      */
-    protected connection: MysqlConnection;
+    protected connection: knex;
     /**
      * Data Steward
      * -------------
@@ -52,14 +48,22 @@ export declare abstract class System {
     protected dataSteward: DataSteward;
     /**
      * Translations
+     * ------------
      *
      * Hold all the loaded translations from this server
      */
     protected loadedTranslations: {
         [langVariation: string]: any;
     };
-    constructor(server: AuriaServer, name: string);
-    getDataType(name: string): DataType;
+    /**
+     * [Factory] SystemRequest
+     * ------------------------
+     *
+     * Factory to produce the expected SystemRequest
+     *
+     */
+    protected systemRequestFactory: SystemRequestFactory;
+    constructor(name: string);
     /**
      * Build all modules from this system
      *
@@ -74,25 +78,51 @@ export declare abstract class System {
     /**
      * Build access to this system auria connection
      */
-    protected abstract buildSystemConnection(): MysqlConnection;
+    protected abstract buildSystemConnection(): knex;
     /**
      * Public access to this system database connection
      */
-    abstract getSystemConnection(): MysqlConnection;
+    abstract getSystemConnection(): knex;
     /**
-     * Public access to this system access manager
+     *
      */
-    abstract getSystemAccessManager(): AccessManager;
     abstract getAuthenticator(): SystemAuthenticator;
-    addUser(user: SystemUser): System;
+    loginUser(user: SystemUser, request: LoginRequest): System;
+    /**
+     *
+     * @param user
+     * @param request
+     */
+    addUser(user: SystemUser, request: LoginRequest): System;
     getSystemVersion(): number;
-    getServer(): AuriaServer;
     hasModule(moduleName: string): boolean;
     addModule(...module: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
     getUser(username: string): SystemUser | null;
+    isUserLoggedIn(username: string): boolean;
     removeUser(username: string): boolean;
-    getConnection(connId: number): void;
-    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<void>;
+    /**
+     * Handle Request
+     * ---------------
+     *
+     * Will proccess a SystemRequest expecting a Response to be sent or
+     * a Promise<Response>
+     * The Response will be received and processed to be sent as a JSON
+     * object to the client that made the original HTTP Request
+     *
+     * @param request SystemRequest
+     * @param response Express **Response** object
+     * @param next Express **NextFunction**
+     */
+    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<any>;
+    /**
+     * Promote to SystemRequest
+     * -------------------------
+     * Will transform an Express **Request** object to a **SystemRequest** object
+     *
+     * @param request Express **Request** object
+     * @param stack RequestStack containing the digested URL
+     */
+    promoteToSystemRequest(request: ServerRequest, stack: RequestStack): SystemRequest;
 }

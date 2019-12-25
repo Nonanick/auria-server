@@ -2,8 +2,13 @@ import { ModuleListener, ListenerAction } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
+import { Table } from "../../../database/structure/table/Table";
 import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
 import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+export declare type RowSaveInfoData = {
+    id: any;
+    values: any;
+};
 export declare type TableDataFilterRequest = {
     column: string;
     op: SQLOperators;
@@ -61,7 +66,7 @@ export declare class DataSyncListener extends ModuleListener {
      * @param response
      * @param table
      */
-    private attachListenersToTable;
+    protected attachListenersToTable(response: AuriaEventResponse, table: Table): void;
     /**
      * Detach Response Listener to Table Changes
      * -----------------------------------------
@@ -73,7 +78,7 @@ export declare class DataSyncListener extends ModuleListener {
      * @param response
      * @param table
      */
-    private detachListenersOfTable;
+    protected detachListenersOfTable(response: AuriaEventResponse, table: Table): void;
     /**
      * [DataSync]: Fetch
      * ------------------

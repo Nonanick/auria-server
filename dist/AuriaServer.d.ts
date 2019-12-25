@@ -31,7 +31,13 @@ export declare class AuriaServer {
      */
     private serverSessionId;
     /**
-     * Function to be called each time a request by a client is made
+     * [HTTP Request Entry Point]
+     * Request Handler
+     * ---------------
+     * Function to be called each time an HTTP request is made
+     * will try to forward the request to the system responsible
+     * for handling it;
+     *
      */
     private requestHandler;
     constructor(app: Express);
