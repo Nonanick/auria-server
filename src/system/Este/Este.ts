@@ -1,9 +1,12 @@
 import { System } from "../../kernel/System";
 import { Module } from "../../kernel/module/Module";
-import { AccessManager } from "../../kernel/security/AccessManager";
 import Knex = require("knex");
 
 export class Este extends System {
+    
+    protected getAccessRuleFactory(): import("../../kernel/security/access/AccessRuleFactory").AccessRuleFactory {
+        throw new Error("Method not implemented.");
+    }
 
     public getAuthenticator(): import("../../kernel/security/auth/SystemAuthenticator").SystemAuthenticator {
         throw new Error("Method not implemented.");
@@ -29,9 +32,6 @@ export class Este extends System {
         throw new Error("Method not implemented.");
     }
 
-    public getSystemAccessManager(): AccessManager {
-        throw new Error("Method not implemented.");
-    }
 
 
 }

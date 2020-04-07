@@ -1,35 +1,36 @@
-import { ModuleListener, ListenerAction, ListenerActionsDefinition } from "../../ModuleListener";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
-import * as jwt from 'jsonwebtoken';
-import { AuthConfig } from '../../../../config/Auth';
-import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
 import { LoginRequest } from "../requests/LoginRequest";
 import { LogoutFailed } from "../exceptions/login/LogoutFailed";
-import { HandshakeFailed } from "../exceptions/login/HandshakeFailed";
 import { LoginFailed } from "../exceptions/login/LoginFailed";
-import { LoginAttemptManager } from "./login/LoginAttemptManager";
+import { LoginAttemptManager } from "./actions/login/LoginAttemptManager";
 import { SystemUser } from "../../../security/SystemUser";
+import { ListenerAction } from "../../ListenerAction";
+import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
+// # - Login Action Metadata
+import { LoginActionMetadata } from "./actions/login/LoginActionDefinition";
+import { LogoutActionMetadata } from "./actions/logout/LogoutActionDefinition";
 
 export class LoginListener extends ModuleListener {
 
+    /**
+     * Amount of time required to complete
+     * the login request
+     */
+    static LOGIN_LISTENER_DELAY_LOGIN_ATTEMPT = 1000;
+
     protected loginAttemptManager: LoginAttemptManager;
 
-    public getRequiredRequestHandlers(): AuriaMiddleware[] {
-        return [];
-    }
-
     constructor(module: Module) {
-        super(module, "LoginListener");
+        super(module, "Login");
 
         this.loginAttemptManager = new LoginAttemptManager();
     }
 
-    public getExposedActionsDefinition(): ListenerActionsDefinition {
+    public getExposedActionsMetadata(): AuriaListenerActionMetadata {
         return {
-            "login": {},
-            "handshake": {},
-            "keepalive": {},
-            "logout": {},
+            "login": LoginActionMetadata,
+            "logout": LogoutActionMetadata,
         };
     }
 

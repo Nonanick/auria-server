@@ -1,6 +1,5 @@
-import { ModuleListener, ListenerActionsDefinition } from "../../../../../kernel/module/ModuleListener";
-import { AuriaMiddleware } from "../../../../../kernel/http/AuriaMiddleware";
+import { ModuleListener } from "../../../../../kernel/module/ModuleListener";
+import { ListenerActionsMetadata } from "../../../../../kernel/module/ListenerAction";
 export declare class ConnectionListener extends ModuleListener {
-    getRequiredRequestHandlers(): AuriaMiddleware[];
-    getExposedActionsDefinition(): ListenerActionsDefinition;
+    getExposedActionsMetadata(): ListenerActionsMetadata;
 }

@@ -77,6 +77,7 @@ export declare abstract class Module {
      * @param listenerName
      */
     getListener(listenerName: string): ModuleListener | undefined;
+    getAllListeners(): ModuleListener[];
     /**
      * Add Multiple Listeners to this Module
      * --------------------------------------

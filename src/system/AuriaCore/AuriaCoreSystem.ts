@@ -1,14 +1,11 @@
-import { System } from "../../kernel/System";
-import { CoreAccessManager } from "./security/CoreAccessManager";
-import { Module } from "../../kernel/module/Module";
 import { AuriaArchitect } from "./module/architect/AuriaArchitect";
-import { SystemAuthenticator } from "../../kernel/security/auth/SystemAuthenticator";
 import { CoreAuthenticator } from "./security/CoreAuthenticator";
 import Knex = require("knex");
+import { AuriaAccessRuleFactory } from "../../default/security/access/AuriaAccessRuleFactory";
+import { AuriaSystem } from "../../default/AuriaSystem";
+import { PasswordAutheticator } from "../../kernel/security/auth/PasswordAuthenticator";
 
-export class AuriaCoreSystem extends System {
-
-    protected accessManager: CoreAccessManager;
+export class AuriaCoreSystem extends AuriaSystem {
 
     protected authenticator : CoreAuthenticator;
 
@@ -17,18 +14,13 @@ export class AuriaCoreSystem extends System {
 
         this.authenticator = new CoreAuthenticator(this);
 
+        let ape = new AuriaAccessRuleFactory(this);
+        this.accessPolicyEnforcer.setAccessRuleFactory(ape.getFactoryFunction());
+
         this.addModule(
             new AuriaArchitect(this)
         );
 
-    }
-
-    protected buildSystemModules(): Map<string, Module> {
-        throw new Error("Method not implemented.");
-    }
-
-    public getSystemModules(): Map<string, Module> {
-        throw new Error("Method not implemented.");
     }
 
     protected buildSystemConnection(): Knex {
@@ -55,16 +47,8 @@ export class AuriaCoreSystem extends System {
         return this.connection;
     }
 
-    public getSystemAccessManager(): CoreAccessManager {
 
-        if (this.accessManager == null) {
-            this.accessManager = new CoreAccessManager(this);
-        }
-
-        return this.accessManager;
-    }
-
-    public getAuthenticator(): SystemAuthenticator {
+    public getAuthenticator(): PasswordAutheticator {
         return this.authenticator;
     }
 

@@ -15,7 +15,7 @@ export declare class ModuleManager {
     protected modules: Map<string, Module>;
     constructor(system: System);
     hasModule(moduleName: string): boolean;
-    addModule(...module: Module[]): void;
+    addModule(...modules: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
     loadModulesFromDatabase(): void;

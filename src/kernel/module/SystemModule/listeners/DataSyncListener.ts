@@ -1,10 +1,10 @@
-import { ModuleListener, ListenerAction } from "../../ModuleListener";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
 import { Table } from "../../../database/structure/table/Table";
 import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
-import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+import { ListenerAction } from "../../ListenerAction";
 
 export type RowSaveInfoData = {
     id: any;
@@ -18,10 +18,6 @@ export type TableDataFilterRequest = {
 };
 
 export class DataSyncListener extends ModuleListener {
-
-    public getRequiredRequestHandlers(): AuriaMiddleware[] {
-        throw new Error("Method not implemented.");
-    }
 
     /**
      * Listeners of EventResponse
@@ -37,7 +33,7 @@ export class DataSyncListener extends ModuleListener {
         this.listenersOfResponse = new Map();
     }
 
-    public getExposedActionsDefinition() {
+    public getExposedActionsMetadata() {
         return {
             "listen": {},
             "fetch": {},

@@ -4,6 +4,7 @@ export abstract class AuriaException {
     protected message: string;
     protected code: string;
 
+    protected httpCode: number = 400;
     constructor(message: string, ...args: any[]) {
         this.message = message;
         this.errArgs = args;
@@ -24,6 +25,20 @@ export abstract class AuriaException {
         let now = new Date();
         throw new Error("\n[" + now.toLocaleDateString() + "]: EXCEPTION '" + this.getCode() + "':\n-- Message\n" + this.message);
     }
+
+    public setHttpResponseCode(code: number) {
+        this.httpCode = code;
+        return this;
+    }
+
+    public getHttpCode(): number {
+        return this.httpCode;
+    }
+
+    public getExtraArgs() : any[] {
+        return this.errArgs;
+    }
+
 
 
 

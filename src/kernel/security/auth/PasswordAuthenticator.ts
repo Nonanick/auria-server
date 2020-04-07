@@ -5,8 +5,11 @@ import { AuthenticationError } from "../../../system/AuriaCore/exceptions/authen
 
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import { UserNotLoggedIn } from "../../exceptions/kernel/UserNotLoggedIn";
 
 export abstract class PasswordAutheticator extends SystemAuthenticator {
+
+    public static AUTHENTICATOR_JWT_HEADER_NAME = "X-Auria-Access-Token";
 
     isAuthenticated(user: SystemUser): Promise<boolean> {
         throw new Error("Method not implemented.");
@@ -16,9 +19,10 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
 
         let systemUser = new SystemUser(this.system, "guest");
 
-        let token = request.headers['auria-access-token'];
-
-        console.log("User Access Token:", token);
+        let token = request.headers[
+            // Express convert headers to lowercase!
+            PasswordAutheticator.AUTHENTICATOR_JWT_HEADER_NAME.toLowerCase()
+        ];
 
         if (token != undefined) {
             let validateToken = this.validateToken(token as string);
@@ -26,15 +30,23 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
                 let tokenUsername = validateToken.authInfo!.username;
                 let tokenSystem = validateToken.authInfo!.targetedSystem;
 
-                if (tokenSystem == this.system.name && this.system.isUserLoggedIn(tokenUsername)) {
-                    systemUser = this.system.getUser(tokenUsername)!;
-
-                    console.log("[CoreAuthenticator] Request Token is valid and user is logged into the system!");
+                if (tokenSystem == this.system.name) {
+                    if (this.system.isUserLoggedIn(tokenUsername)) {
+                        systemUser = this.system.getUser(tokenUsername)!;
+                        console.log("[PasswordAuthenticator] Request Token is valid and user is logged into the system!");
+                    } else {
+                        console.log("[PasswordAuthenticator] Request Token is valid and user is NOT logged into the system!");
+                        throw new UserNotLoggedIn("The user in the token is not logged into the system!");
+                    }
+                } else {
+                    console.log("[PasswordAuthenticator] Invalid token!");
                 }
+
             }
         }
         return systemUser;
     }
+
 
     /**
      * Generates an JSON Web Token to be used as an authentication by the user
@@ -63,10 +75,10 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
         return token;
     }
 
-    private validateToken(jwtToken: string): ValidateTokenInfo {
+    public validateToken(jwtToken: string): ValidateTokenInfo {
         try {
-            let jwtDecipher: SystemUserAuthInfo = jwt.verify(jwtToken, this.getJwtSecret(), { maxAge: "2 days" }) as any;
-
+            let jwtDecipher: SystemUserAuthInfo;
+            jwtDecipher = jwt.verify(jwtToken, this.getJwtSecret(), { maxAge: "2 days" }) as any;
             return {
                 valid: true,
                 authInfo: jwtDecipher
@@ -109,14 +121,14 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
             );
     }
 
-    protected abstract getJwtSecret() : string;
+    protected abstract getJwtSecret(): string;
 
 
 }
 
 export type PasswordCredentials = {
-    username : string;
-    password : string;
+    username: string;
+    password: string;
 };
 
 export type SystemUserAuthInfo = {

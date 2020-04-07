@@ -1,12 +1,17 @@
-import { ModuleListener, ListenerAction, ListenerActionsDefinition } from "../../ModuleListener";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
-import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
-import { LoginAttemptManager } from "./login/LoginAttemptManager";
+import { LoginAttemptManager } from "./actions/login/LoginAttemptManager";
+import { ListenerAction } from "../../ListenerAction";
+import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
 export declare class LoginListener extends ModuleListener {
+    /**
+     * Amount of time required to complete
+     * the login request
+     */
+    static LOGIN_LISTENER_DELAY_LOGIN_ATTEMPT: number;
     protected loginAttemptManager: LoginAttemptManager;
-    getRequiredRequestHandlers(): AuriaMiddleware[];
     constructor(module: Module);
-    getExposedActionsDefinition(): ListenerActionsDefinition;
+    getExposedActionsMetadata(): AuriaListenerActionMetadata;
     login: ListenerAction;
     logout: ListenerAction;
 }

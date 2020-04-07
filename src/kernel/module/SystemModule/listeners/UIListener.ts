@@ -1,30 +1,23 @@
-import { ModuleListener,  ListenerActionsDefinition } from "../../ModuleListener";
-import { AuriaRequest } from "../../../http/AuriaRequest";
+import { ModuleListener } from "../../ModuleListener";
 import { AuriaResponse } from "../../../http/AuriaResponse";
 import { Module } from "../../Module";
+import { ListenerRequest } from "../../../http/request/ListenerRequest";
+import { ListenerActionsMetadata } from "../../ListenerAction";
 
 export class UIListener extends ModuleListener {
     
-    public getRequiredRequestHandlers(): import("../../../http/AuriaMiddleware").AuriaMiddleware[] {
-        throw new Error("Method not implemented.");
-    }
-
     constructor(module: Module) {
         super(module, "UIListener");
     }
 
-    public getExposedActionsDefinition(): ListenerActionsDefinition {
+    public getExposedActionsMetadata(): ListenerActionsMetadata {
         return { 
-            "menuTree" : {
-                tables : {}
-            },
-            "getModulesTree" : {
-                tables : {}
-            }
+            "menuTree" : {},
+            "getModulesTree" : {}
         };
     }
 
-    public menuTree: (req: AuriaRequest, res: AuriaResponse) => void =
+    public menuTree: (req: ListenerRequest, res: AuriaResponse) => void =
         (req, res) => {
             res.send();
             //let access = this.module.getSystem().getSystemAccessManager();
@@ -32,7 +25,7 @@ export class UIListener extends ModuleListener {
             //let acessTree = access.getUserAccessTree();
         }
 
-    public getModulesTree: (req: AuriaRequest, res: AuriaResponse) => void =
+    public getModulesTree: (req: ListenerRequest, res: AuriaResponse) => void =
         (req, res) => {
 
             res.addToResponse({

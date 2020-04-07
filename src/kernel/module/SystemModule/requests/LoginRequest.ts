@@ -4,7 +4,7 @@ import { ModuleRequest } from "../../../http/request/ModuleRequest";
 import { Response } from "express";
 import { System } from "../../../System";
 import { SystemUser } from "../../../security/SystemUser";
-import { SystemLoginAuthDetails } from '../../../security/auth/PasswordAuthenticator';
+import { SystemLoginAuthDetails, PasswordAutheticator } from '../../../security/auth/PasswordAuthenticator';
 
 export interface LoginRequest extends ListenerRequest {
 
@@ -36,6 +36,7 @@ export class LoginRequestFactory {
                         password: password
                     })
                     .then((authDetails: SystemLoginAuthDetails) => {
+
                         // Initialize SystemUser object
                         let logInUser = new SystemUser(system, username);
                         logInUser.setId(authDetails.id);
@@ -50,15 +51,37 @@ export class LoginRequestFactory {
                         // Send back authentication token
                         let token = system.getAuthenticator().generateAuthenticationToken(logInUser);
                         response.cookie("AURIA_UA_NAME", username, {
-                            maxAge : 1000*60*60*2,
-                            httpOnly : true
+                            maxAge: 1000 * 60 * 60 * 2,
+                            httpOnly: true
                         });
                         response.cookie("AURIA_UA_TOKEN", token, {
-                           maxAge : 1000*60*60*2,
-                           httpOnly : false 
+                            maxAge: 1000 * 60 * 60 * 2,
+                            httpOnly: false
                         });
-                        response.setHeader("X-Auria-Access-Token", token);
+                        response.setHeader(PasswordAutheticator.AUTHENTICATOR_JWT_HEADER_NAME, token);
 
+                        //Keep signed in?
+                        if (request.hasParam("keep-signed-in")) {
+
+                            let sessionInfo = {
+                                user: username,
+                                login_time: logInUser.getLoginTime(),
+                                machine_ip: request.getIp(),
+                                token: token,
+                                system: system.name,
+                                client: 'node-server',
+                                user_agent: logInUser.getUserAgent()
+                            };
+
+                            system.getSystemConnection()
+                                .insert(sessionInfo)
+                                .into('sessions')
+                                .then((ids: number[]) => {
+                                    console.log("[LoginRequest] Keep signed in option! Recorded in sessions! ID: ", ids);
+                                }).catch(error => {
+                                    console.error("[LoginRequest] Failed to record session in database!", error);
+                                });
+                        }
                         return logInUser;
                     });
 

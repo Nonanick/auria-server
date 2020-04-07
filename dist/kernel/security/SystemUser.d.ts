@@ -2,9 +2,10 @@ import { User } from "aurialib2";
 import { Table } from "../database/structure/table/Table";
 import { System } from "../System";
 import { UserRole } from "./UserRole";
-import { DataPermission } from "./permission/DataPermission";
-import { LoginRequest } from "../module/SystemModule/requests/LoginRequest";
+import { DataPermission } from "../module/accessPolicy/data/DataAccessPolicy";
+import { SystemRequest } from "../http/request/SystemRequest";
 export declare class SystemUser extends User {
+    static GUEST_USERNAME: string;
     static COOKIE_USERNAME: string;
     static COOKIE_HANDSHAKE: string;
     static SESSION_EXPIRE_TIME: number;
@@ -120,7 +121,7 @@ export declare class SystemUser extends User {
     getAccessLevel(): number;
     setAccessLevel(level: SystemUserPrivilege): this;
     getUsername(): string;
-    startSession(request: LoginRequest): void;
+    startSession(request: SystemRequest): void;
     buildUser(): void;
     private buildAccessPermission;
     private buildDataPermission;
@@ -129,6 +130,7 @@ export declare class SystemUser extends User {
     private queryForUserAcessibleRoles;
     private buildUserAcessibleRolesFromQuery;
     private buildUserRoles;
+    getUserAgent(): string;
     setUserAgent(userAgent: string): this;
     setIp(ip: string): this;
     getUserInfo(): Promise<UserInformationData>;
@@ -189,5 +191,4 @@ export declare type LoginPayload = {
     ip: string;
     loginTime: number;
 };
-export declare type UserAutheticators = "password" | "cookie" | "jwt";
 export {};

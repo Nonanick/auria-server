@@ -1,6 +1,6 @@
 import { LoginAttempt, LoginAttempIdentification } from "./LoginAttempt";
-import { ListenerRequest } from "../../../../http/request/ListenerRequest";
-import { LoginAttemptDenied } from "../../exceptions/login/LoginAttemptDenied";
+import { ListenerRequest } from "../../../../../http/request/ListenerRequest";
+import { LoginAttemptDenied } from "../../../exceptions/login/LoginAttemptDenied";
 
 export class LoginAttemptManager {
 
@@ -18,7 +18,6 @@ export class LoginAttemptManager {
 
     static LOGIN_ATTEMPT_EXPIRE_TIME = 60 * 60 * 2;
 
-
     private allLoginAttempts: LoginAttempt[];
 
     private attemptsPerIdentification: Map<string, LoginAttempt[]>;
@@ -31,7 +30,7 @@ export class LoginAttemptManager {
      * 
      * A security layer that prevents brute force
      * 
-     * Ever login attempt should first verify if the
+     * Every login attempt should first verify if the
      * request has not exceeded the max amount of times allowed
      * to be failed
      */
@@ -67,7 +66,7 @@ export class LoginAttemptManager {
         ) {
             return this.createLoginAttempt(request);
         } else {
-            throw new LoginAttemptDenied("Failed to login, you exceeded the amount of tries! Please wait for a bit and try again!");
+            throw new LoginAttemptDenied("Failed to login, you exceeded the amount of tries! Please wait for a bit and try again!", { attempt_cooldown: LoginAttemptManager.LOGIN_ATTEMPT_COOLDOWN });
         }
     }
 

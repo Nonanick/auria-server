@@ -1,6 +1,6 @@
 import { Module, TranslationsByLang } from "../Module";
 import { System } from "../../System";
-import { UIListener } from "./listeners/UIListener";
+//import { UIListener } from "./listeners/UIListener";
 import { I18nListener } from "./listeners/I18nListener";
 import { TableListener } from "./listeners/TableListener";
 import { LoginListener } from "./listeners/LoginListener";
@@ -10,7 +10,6 @@ import { Languages, Translator } from "../../i18n/Translator";
 import { SystemPortuguese } from "./i18n/Lang-Pt";
 import { ModuleRequest } from "../../http/request/ModuleRequest";
 import { Response } from "express-serve-static-core";
-import { CookieOptions } from "express";
 import { LoginRequestFactory } from "./requests/LoginRequest";
 
 export class SystemModule extends Module {
@@ -29,7 +28,7 @@ export class SystemModule extends Module {
             new I18nListener(this),
 
             // Add UI interface parameters
-            new UIListener(this),
+           // new UIListener(this),
 
             // Add Table metadata exposure
             new TableListener(this),

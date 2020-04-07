@@ -1,17 +1,14 @@
-import { ModuleListener, ListenerActionsDefinition, ListenerAction } from "../../../../../kernel/module/ModuleListener";
-import { AuriaRequest } from "../../../../../kernel/http/AuriaRequest";
-import { AuriaResponse } from "../../../../../kernel/http/AuriaResponse";
-import { AuriaMiddleware } from "../../../../../kernel/http/AuriaMiddleware";
+import { ModuleListener } from "../../../../../kernel/module/ModuleListener";
 import { Table } from "../../../../../kernel/database/structure/table/Table";
 import { AuriaConnection } from "../../../../../kernel/database/connection/AuriaConnection";
 import { SystemUser } from "../../../../../kernel/security/SystemUser";
 import { AuriaArchitect } from "../AuriaArchitect";
 import { DatabaseSychronizer } from "../databaseManipulation/DatabaseSynchronizer";
+import { ListenerActionsMetadata, ListenerAction } from "../../../../../kernel/module/ListenerAction";
 export declare class TableManagerListener extends ModuleListener {
     private dbSync;
     constructor(module: AuriaArchitect);
-    getRequiredRequestHandlers(): AuriaMiddleware[];
-    getExposedActionsDefinition(): ListenerActionsDefinition;
+    getExposedActionsMetadata(): ListenerActionsMetadata;
     protected getDatabaseSynchronizer(conn: number): DatabaseSychronizer;
     situation: ListenerAction;
     databaseSync: ListenerAction;
@@ -22,7 +19,6 @@ export declare class TableManagerListener extends ModuleListener {
     protected syncColumnWithComparisson(user: SystemUser, table: Table, comparisson: ColumnComparisson): Promise<void>;
     protected fetchTableDescription(conn: AuriaConnection, table: string): Promise<any>;
     protected compareColumnDescripion(description: DescribeTableResult, table: Table): ColumnComparisson;
-    list: (req: AuriaRequest, res: AuriaResponse) => void;
 }
 declare type DescribeTableResult = {
     Field: string;

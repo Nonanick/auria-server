@@ -1,10 +1,10 @@
-import { ModuleListener, ListenerAction } from "../../ModuleListener";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
 import { AuriaEventResponse } from "../../../http/AuriaEventResponse";
 import { RowModel } from "../../../database/structure/rowModel/RowModel";
 import { Table } from "../../../database/structure/table/Table";
 import { SQLOperators } from "../../../database/dataQuery/QueryFilter";
-import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+import { ListenerAction } from "../../ListenerAction";
 export declare type RowSaveInfoData = {
     id: any;
     values: any;
@@ -15,7 +15,6 @@ export declare type TableDataFilterRequest = {
     value: string;
 };
 export declare class DataSyncListener extends ModuleListener {
-    getRequiredRequestHandlers(): AuriaMiddleware[];
     /**
      * Listeners of EventResponse
      * --------------------------
@@ -25,7 +24,7 @@ export declare class DataSyncListener extends ModuleListener {
      */
     protected listenersOfResponse: Map<AuriaEventResponse, any>;
     constructor(module: Module);
-    getExposedActionsDefinition(): {
+    getExposedActionsMetadata(): {
         "listen": {};
         "fetch": {};
         "save": {};

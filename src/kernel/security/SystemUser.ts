@@ -2,12 +2,14 @@ import { User } from "aurialib2";
 import { Table } from "../database/structure/table/Table";
 import { System } from "../System";
 import { UserRole } from "./UserRole";
-import { DataPermission } from "./permission/DataPermission";
-import { LoginRequest } from "../module/SystemModule/requests/LoginRequest";
+import { DataPermission } from "../module/accessPolicy/data/DataAccessPolicy";
 import { ParameterAlreadyInitialized } from "../exceptions/ParameterAlreadyInitialized";
+import { SystemRequest } from "../http/request/SystemRequest";
 
 
 export class SystemUser extends User {
+
+    public static GUEST_USERNAME = "guest";
 
     public static COOKIE_USERNAME = "AURIA_UA_USERNAME";
 
@@ -16,13 +18,14 @@ export class SystemUser extends User {
     public static SESSION_EXPIRE_TIME = 1000 * 60 * 60 * 24 * 2;
 
     private _id: number;
+
     /**
      * Username
      * ---------
      * 
      * Unique identifier of the user in the system
      */
-    protected username: string = "guest";
+    protected username: string = SystemUser.GUEST_USERNAME;
 
     /**
      * System Name
@@ -198,11 +201,14 @@ export class SystemUser extends User {
         return this.username;
     }
 
-    public startSession(request: LoginRequest): void {
+    public startSession(request: SystemRequest): void {
         if (this.loginTime == null) {
+
             this.loginTime = Date.now();
             this.ip = request.getIp();
             this.userAgent = request.getUserAgent();
+
+            this.buildUser();
         } else {
             throw new ParameterAlreadyInitialized("User session already started!")
         }
@@ -222,7 +228,14 @@ export class SystemUser extends User {
 
         this.buildDataPermission();
         this.buildAccessPermission();
+
+        console.log(
+            "[SystemUser] Login request ended on server side!\n",
+            "Finished building user information, will probably make a promise to control the user state!",
+            this.username
+        );
     }
+
     private async buildAccessPermission() {
 
     }
@@ -261,6 +274,16 @@ export class SystemUser extends User {
     }
 
     private async queryForUserAcessibleRoles(userRoles: UserRole[]) {
+        let rolesId: number[] = [];
+        userRoles.forEach((val) => {
+            if (val != null)
+                rolesId.push(val.getId());
+        });
+
+        if (rolesId.length == 0) {
+            return Promise.resolve().then(() => { return []; });
+        }
+
         let accessRolesQuery = "\
         WITH RECURSIVE access_roles AS (\
             SELECT \
@@ -268,7 +291,7 @@ export class SystemUser extends User {
                 role.name, role.title, role.description, role.icon, \
                 role.parent_role \
             FROM role \
-            WHERE role.parent_role IS NULL AND role._id IN (?) \
+            WHERE role.parent_role IS NULL AND role._id IN (" + rolesId.join(' , ') + ") \
             UNION ALL  \
             SELECT \
                 role._id, \
@@ -280,11 +303,7 @@ export class SystemUser extends User {
         SELECT * FROM access_roles";
 
         let conn = this.system.getSystemConnection();
-        let rolesId: number[] = [];
-        userRoles.forEach((val) => {
-            if (val != null)
-                rolesId.push(val.getId());
-        });
+
         return conn.raw(accessRolesQuery);
     }
 
@@ -340,6 +359,10 @@ export class SystemUser extends User {
         }
 
         return this.buildUserRolesPromise;
+    }
+
+    public getUserAgent(): string {
+        return this.userAgent;
     }
 
     public setUserAgent(userAgent: string) {
@@ -447,7 +470,7 @@ export class SystemUser extends User {
         this.system.removeUser(this.username);
 
         this.roles = [];
-        this.username = "guest";
+        this.username = SystemUser.GUEST_USERNAME;
         this.accessLevel = SystemUserPrivilege.GUEST;
         this.canAccessRoles = [];
 
@@ -505,5 +528,3 @@ export type LoginPayload = {
     ip: string;
     loginTime: number;
 };
-
-export type UserAutheticators = "password" | "cookie" | "jwt";

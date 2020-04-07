@@ -2,7 +2,7 @@ import { AuriaException } from "../AuriaException";
 
 export class SystemUnavaliable extends AuriaException {
 
-    public static CODE = "100001";
+    public static CODE = "SYS.KERNEl.SYSTEM_UNAVALIABLE";
 
     getCode(): string {
         return SystemUnavaliable.CODE;

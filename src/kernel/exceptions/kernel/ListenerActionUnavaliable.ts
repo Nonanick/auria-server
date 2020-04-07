@@ -3,7 +3,7 @@ import { AuriaException } from "../AuriaException";
 export class ListenerActionUnavaliable extends AuriaException {
 
     getCode(): string {
-        return "00007";
+        return "SYS.MODULE.ACTION_UNAVALIABLE";
     }
 
 }

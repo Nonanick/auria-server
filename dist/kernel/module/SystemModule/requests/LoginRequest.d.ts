@@ -13,7 +13,7 @@ export interface LoginRequest extends ListenerRequest {
 }
 export declare class LoginRequestFactory {
     static make(request: ModuleRequest, response: Response, system: System): ModuleRequest & {
-        setCookie: (name: string, value: string, options: CookieOptions) => Response;
+        setCookie: (name: string, value: string, options: CookieOptions) => Response<any>;
         loginWithPassword: (username: string, password: string, request: LoginRequest) => Promise<SystemUser>;
     };
 }

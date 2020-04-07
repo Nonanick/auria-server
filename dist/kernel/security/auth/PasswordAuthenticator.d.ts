@@ -2,6 +2,7 @@ import { SystemAuthenticator, SystemAuthenticationCredentials } from "./SystemAu
 import { SystemRequest } from "../../http/request/SystemRequest";
 import { SystemUser } from "../SystemUser";
 export declare abstract class PasswordAutheticator extends SystemAuthenticator {
+    static AUTHENTICATOR_JWT_HEADER_NAME: string;
     isAuthenticated(user: SystemUser): Promise<boolean>;
     authenticateRequest(request: SystemRequest): Promise<SystemUser>;
     /**
@@ -11,7 +12,7 @@ export declare abstract class PasswordAutheticator extends SystemAuthenticator {
      * @param user
      */
     generateAuthenticationToken(user: SystemUser): string;
-    private validateToken;
+    validateToken(jwtToken: string): ValidateTokenInfo;
     authenticate(credentials: SystemAuthenticationCredentials): Promise<SystemLoginAuthDetails>;
     protected abstract getJwtSecret(): string;
 }
@@ -31,3 +32,8 @@ export declare type SystemLoginAuthDetails = {
     username: string;
     userType: number;
 };
+declare type ValidateTokenInfo = {
+    valid: boolean;
+    authInfo: undefined | SystemUserAuthInfo;
+};
+export {};

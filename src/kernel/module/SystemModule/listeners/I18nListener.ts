@@ -1,38 +1,44 @@
-import { ModuleListener, ListenerActionsDefinition } from "../../ModuleListener";
-import { AuriaRequest } from "../../../http/AuriaRequest";
-import { AuriaResponse } from "../../../http/AuriaResponse";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
+import { ListenerAction } from "../../ListenerAction";
+import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
 
 export class I18nListener extends ModuleListener {
-  
+
 
 
     constructor(module: Module) {
-        super(module, "I18nListener");
+        super(module, "I18n");
     }
 
-    public getExposedActionsDefinition(): ListenerActionsDefinition {
+    public getExposedActionsMetadata(): AuriaListenerActionMetadata {
         return {
-            "getTranslations" : {
-                tables : { }
+            "getTranslations": {
+                DISABLE_WHITELIST_RULE: true,
+                DISABLE_BLACKLIST_RULE: true,
+            },
+            "testTranslations": {
+                accessRules: [
+                    {
+                        name: "TestingPermissions",
+                        rule: async (context) => {
+                            return context.user.getUsername() == "nich";
+                        }
+                    }
+                ]
             }
         };
     }
 
-    public getRequiredRequestHandlers(): import("../../../http/AuriaMiddleware").AuriaMiddleware[] {
-        return [];
-    }
+    public testTranslations: ListenerAction = (req) => {
+        return "Congrats you can access this!";
+    };
 
-    public getTranslations: (req: AuriaRequest, res: AuriaResponse) => void =
-        (req, res) => {
-
-            //let lang: string = (req.requiredParam('lang') as string);
-
-            /*res.addToResponse({
-                translations: this.module.getSystem().getTranslator().getTranslations(lang)
-            });*/
-
-            res.send();
+    public getTranslations: ListenerAction =
+        (req) => {
+            return {
+                "translations": []
+            };
         };
 
 }

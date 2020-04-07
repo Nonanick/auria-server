@@ -36,8 +36,8 @@ export class ModuleManager {
         return this.modules.has(moduleName);
     }
 
-    public addModule(...module: Module[]) {
-        module.forEach((mod) => {
+    public addModule(...modules: Module[]) {
+        modules.forEach((mod) => {
             // # - Already exists, probable conflict with DB Module + Coded Module!
             if (this.modules.has(mod.name)) {
 

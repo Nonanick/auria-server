@@ -15,6 +15,4 @@ export class CoreAuthenticator extends PasswordAutheticator {
         return this.jwtConfig.jwtSecret;
     }
 
-
-    
 }

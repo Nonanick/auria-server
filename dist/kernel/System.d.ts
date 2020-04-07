@@ -1,17 +1,23 @@
+/// <reference types="node" />
 import { Response, NextFunction } from "express-serve-static-core";
+import { EventEmitter } from 'events';
 import { SystemRequest, SystemRequestFactory } from "./http/request/SystemRequest";
 import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
 import { ModuleManager } from "./module/ModuleManager";
 import { Module } from "./module/Module";
 import { RequestStack } from "./RequestStack";
 import { SystemUser } from "./security/SystemUser";
-import { DataSteward } from "aurialib2";
+import { DataSteward, Authenticator, ServerResponse } from "aurialib2";
 import knex from 'knex';
 import { ServerRequest } from "./http/request/ServerRequest";
-import { LoginRequest } from "./module/SystemModule/requests/LoginRequest";
+import { AccessPolicyEnforcer } from "./security/access/AccessPolicyEnforcer";
+import Knex from "knex";
+import { AccessRuleFactory } from "./security/access/AccessRuleFactory";
 export declare const DEFAULT_LANG = "en";
 export declare const DEFAULT_LANG_VARIATION = "us";
-export declare abstract class System {
+export declare abstract class System extends EventEmitter {
+    static SYSTEM_MODULE_ADDED: string;
+    static SYSTEM_RESOURCE_MODIFIED: string;
     /**
      * System name
      * Unique identifier of this system
@@ -39,13 +45,15 @@ export declare abstract class System {
      * ------------------
      *
      */
-    protected connection: knex;
+    protected connection: Knex;
+    protected authenticator: Authenticator;
     /**
      * Data Steward
      * -------------
      *
      */
     protected dataSteward: DataSteward;
+    protected accessPolicyEnforcer: AccessPolicyEnforcer;
     /**
      * Translations
      * ------------
@@ -65,16 +73,9 @@ export declare abstract class System {
     protected systemRequestFactory: SystemRequestFactory;
     constructor(name: string);
     /**
-     * Build all modules from this system
-     *
-     * This function is called one time at server startup!
-     *
-     */
-    protected abstract buildSystemModules(): Map<string, Module>;
-    /**
      * Public access to this system modules instances
      */
-    abstract getSystemModules(): Map<string, Module>;
+    getSystemModules(): Map<string, Module>;
     /**
      * Build access to this system auria connection
      */
@@ -87,16 +88,16 @@ export declare abstract class System {
      *
      */
     abstract getAuthenticator(): SystemAuthenticator;
-    loginUser(user: SystemUser, request: LoginRequest): System;
+    loginUser(user: SystemUser, request: SystemRequest): System;
     /**
      *
      * @param user
      * @param request
      */
-    addUser(user: SystemUser, request: LoginRequest): System;
+    addUser(user: SystemUser, request: SystemRequest): System;
     getSystemVersion(): number;
     hasModule(moduleName: string): boolean;
-    addModule(...module: Module[]): void;
+    addModule(...modules: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
     getUser(username: string): SystemUser | null;
@@ -115,7 +116,10 @@ export declare abstract class System {
      * @param response Express **Response** object
      * @param next Express **NextFunction**
      */
-    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<any>;
+    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<ServerResponse>;
+    systemResponseFactory(data: any, response: Response): Promise<ServerResponse>;
+    private handleRequestException;
+    authenticateRequest(request: SystemRequest): Promise<SystemUser>;
     /**
      * Promote to SystemRequest
      * -------------------------
@@ -125,4 +129,5 @@ export declare abstract class System {
      * @param stack RequestStack containing the digested URL
      */
     promoteToSystemRequest(request: ServerRequest, stack: RequestStack): SystemRequest;
+    protected abstract getAccessRuleFactory(): AccessRuleFactory;
 }

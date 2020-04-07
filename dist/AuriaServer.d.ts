@@ -1,5 +1,6 @@
 import { Express } from 'express-serve-static-core';
 import { System } from './kernel/System';
+import { AuriaServerBootInfo } from './server/AuriaServerBootInfo';
 export declare type AuriaServerStatus = "online" | "offline" | "maintenance";
 export declare const Auria_ENV: "development" | "production ";
 export declare class AuriaServer {
@@ -29,7 +30,8 @@ export declare class AuriaServer {
     /**
      * This server session
      */
-    private serverSessionId;
+    private serverInstanceId;
+    protected auriaBootInfo: AuriaServerBootInfo;
     /**
      * [HTTP Request Entry Point]
      * Request Handler
@@ -40,7 +42,18 @@ export declare class AuriaServer {
      *
      */
     private requestHandler;
+    private answerServerStatus;
+    private handleRequestException;
     constructor(app: Express);
+    /**
+     * Load Express modules
+     * --------------------
+     * Common to ALL SYSTEMS under this server!
+     * > BodyParser: URL Encoded + JSON
+     * > CookieParser
+     * > Disable X-Powered-By Header (security trough obscurity?)
+     * > CORS (?)
+     */
     private initializeExpressApp;
     /**
      * Add a System to this server
@@ -50,3 +63,4 @@ export declare class AuriaServer {
     addSystem(...system: System[]): AuriaServer;
     run(): AuriaServer;
 }
+export declare const AURIA_LOG_ROOT: string;

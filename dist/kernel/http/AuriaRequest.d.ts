@@ -16,7 +16,6 @@ export declare class AuriaRequest {
     setSystem(system: System): this;
     digestUrl(): RequestStack;
     digestUser(): Promise<SystemUser>;
-    private validateCookieAuthentication;
     getBody(): any;
     getSystemName(): string;
     getModuleName(): string;

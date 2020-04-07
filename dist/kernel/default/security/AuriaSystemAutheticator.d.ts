@@ -13,7 +13,9 @@ export declare type UserAuthInfo = {
 export declare class AuriaSystemAuthenticator extends SystemAuthenticator {
     protected jwtConfig: AuthConfigType;
     constructor(system: System);
-    authenticate(user: SystemUser): Promise<any>;
+    authenticate(user: {
+        username: string;
+    }): Promise<any>;
     isAuthenticated(user: SystemUser): Promise<boolean>;
     authenticateRequest(request: SystemRequest): Promise<SystemUser>;
     /**

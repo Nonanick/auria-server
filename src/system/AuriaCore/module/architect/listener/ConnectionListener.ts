@@ -1,13 +1,11 @@
-import { ModuleListener, ListenerActionsDefinition } from "../../../../../kernel/module/ModuleListener";
-import { AuriaMiddleware } from "../../../../../kernel/http/AuriaMiddleware";
+import { ModuleListener } from "../../../../../kernel/module/ModuleListener";
+import { ListenerActionsMetadata } from "../../../../../kernel/module/ListenerAction";
 
 export class ConnectionListener extends ModuleListener {
-    public getRequiredRequestHandlers(): AuriaMiddleware[] {
-        return [];
-    }
     
-    public getExposedActionsDefinition(): ListenerActionsDefinition {
-        throw new Error("Method not implemented.");
+    public getExposedActionsMetadata(): ListenerActionsMetadata {
+       return {};
+
     }
     
 }

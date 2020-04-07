@@ -101,6 +101,10 @@ export abstract class Module {
         return this.listeners.get(listenerName);
     }
 
+    public getAllListeners(): ModuleListener[] {
+        return Array.from(this.listeners.values());
+    }
+
     /**
      * Add Multiple Listeners to this Module
      * --------------------------------------
@@ -133,12 +137,15 @@ export abstract class Module {
         } = {};
 
         this.listeners.forEach((listener) => {
-            let actionDefinition = listener.getExposedActionsDefinition();
+            let actionDefinition = listener.getExposedActionsMetadata();
+
             for (var actionName in actionDefinition) {
                 if (actionDefinition.hasOwnProperty(actionName)) {
                     let actionReq = actionDefinition[actionName];
-                    if (actionReq.tables != null) {
-                        let tables = actionReq.tables;
+
+                    if (actionReq.dataDependencies != null) {
+                        let tables = actionReq.dataDependencies;
+                        
                         for (var tableName in tables) {
                             if (tables.hasOwnProperty(tableName)) {
                                 let act = tables[tableName].actions;
@@ -155,9 +162,6 @@ export abstract class Module {
 
     public getTable(user: SystemUser, table: string) {
         throw new Error("Not immplemented yet!");
-        /*
-        return this.system.getData().getTable(user, table);
-        */
     }
 
     protected abstract loadTranslations(): TranslationsByLang;
@@ -181,14 +185,14 @@ export abstract class Module {
 
         let requestListener: string = request.getRequestStack().listener();
 
-        let listener : ModuleListener;
+        let listener: ModuleListener;
         if (!this.listeners.has(requestListener) && !this.listeners.has(requestListener + "Listener")) {
             throw new ListenerUnavaliable("Requested Listener '" + requestListener + "' does not exist in this module!");
         } else {
             listener = this.listeners.get(requestListener)! || this.listeners.get(requestListener + "Listener")!;
         }
 
-        let listenerRequest : ListenerRequest = ListenerRequestFactory.make(request, listener);
+        let listenerRequest: ListenerRequest = ListenerRequestFactory.make(request, listener);
 
         return listener.handleRequest(listenerRequest);
 

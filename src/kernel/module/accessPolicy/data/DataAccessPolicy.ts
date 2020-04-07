@@ -1,4 +1,4 @@
-import { SystemUser } from "../SystemUser";
+import { SystemUser } from "../../../security/SystemUser";
 
 export class DataPermission {
 

@@ -1,4 +1,4 @@
-import { Module, TranslationsByLang } from "../../module/Module";
+import { Module, TranslationsByLang } from "../../kernel/module/Module";
 
 export class AuriaModule extends Module {
 

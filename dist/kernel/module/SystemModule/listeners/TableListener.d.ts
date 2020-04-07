@@ -1,9 +1,9 @@
-import { ModuleListener, ListenerAction, ListenerActionsDefinition } from "../../ModuleListener";
+import { ModuleListener } from "../../ModuleListener";
 import { Module } from "../../Module";
-import { AuriaMiddleware } from "../../../http/AuriaMiddleware";
+import { ListenerAction } from "../../ListenerAction";
+import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
 export declare class TableListener extends ModuleListener {
-    getRequiredRequestHandlers(): AuriaMiddleware[];
     constructor(module: Module);
-    getExposedActionsDefinition(): ListenerActionsDefinition;
+    getExposedActionsMetadata(): AuriaListenerActionMetadata;
     metadata: ListenerAction;
 }
