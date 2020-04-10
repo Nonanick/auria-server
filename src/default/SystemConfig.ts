@@ -6,6 +6,6 @@ export const SystemConfig = {
         Schema : "auria",
         User : "root",
         Password : "",
-        Port : 3307
+        Port : 3306
     },
 };

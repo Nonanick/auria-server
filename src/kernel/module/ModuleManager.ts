@@ -3,6 +3,7 @@ import { Module } from "./Module";
 import { ModuleRowData } from "./ModuleRowData";
 import { DatabaseModule } from "./DatabaseModule/DatabaseModule";
 import { ModuleListener } from "./ModuleListener";
+import { ModuleSystemEntityName } from "../entity/systemEntities/module/Module";
 
 export class ModuleManager {
 
@@ -87,8 +88,8 @@ export class ModuleManager {
         let conn = this.system.getSystemConnection();
 
         conn.select("name", "title", "description", "color", "icon")
-            .from("module")
-            .where("active", "1")
+            .from(ModuleSystemEntityName)
+            .where("entry_status", "active")
             .then((result) => {
                 (result as ModuleRowData[]).forEach((modData: ModuleRowData) => {
                     let dbMod = new DatabaseModule(this.system, modData.name);

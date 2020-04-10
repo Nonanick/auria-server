@@ -2,8 +2,9 @@ import { DataStewardProvider, DataStewardReadRequest, DataStewardReadResponse } 
 
 export class AuriaCoreProvider extends DataStewardProvider {
 
-    processReadRequest(request: DataStewardReadRequest): Promise<DataStewardReadResponse> {
+    digestRequest(request: DataStewardReadRequest): Promise<DataStewardReadResponse> {
         throw new Error("Method not implemented.");
     }
+
     
 }

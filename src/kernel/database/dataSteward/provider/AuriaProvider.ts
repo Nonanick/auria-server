@@ -2,8 +2,8 @@ import { DataStewardProvider, DataStewardReadRequest, DataStewardReadResponse } 
 
 export class AuriaProvider extends DataStewardProvider {
 
-    public async processReadRequest(request : DataStewardReadRequest) : Promise<DataStewardReadResponse> {
-        throw new Error("AuriaProvider not implemented yet!");
+    digestRequest(request: DataStewardReadRequest): Promise<DataStewardReadResponse> {
+        throw new Error("Method not implemented.");
     }
 
 }

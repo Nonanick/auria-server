@@ -7,8 +7,8 @@ var fs = require('fs');
 var https = require('https');
 var cors = require('cors');
 
-var privateKey  = fs.readFileSync('C:\\Apache24\\conf\\ssl\\server.key', 'utf8');
-var certificate = fs.readFileSync('C:\\Apache24\\conf\\ssl\\server.crt', 'utf8');
+var privateKey  = fs.readFileSync('F:\\Apache24\\conf\\ssl\\server.key', 'utf8');
+var certificate = fs.readFileSync('F:\\Apache24\\conf\\ssl\\server.crt', 'utf8');
 
 var credentials = {key: privateKey, cert: certificate};
 

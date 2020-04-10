@@ -25,12 +25,12 @@ export declare class DataSyncListener extends ModuleListener {
     protected listenersOfResponse: Map<AuriaEventResponse, any>;
     constructor(module: Module);
     getExposedActionsMetadata(): {
-        "listen": {};
-        "fetch": {};
-        "save": {};
-        "delete": {};
-        "lock": {};
-        "unlock": {};
+        listen: {};
+        fetch: {};
+        save: {};
+        delete: {};
+        lock: {};
+        unlock: {};
     };
     /**
      * [Action]: Model Updated

@@ -1,5 +1,5 @@
 {
-  "name": "auria-node-server",
+  "name": "auria-server",
   "version": "1.0.0",
   "description": "Auria Server, Node style",
   "main": "dist/server.js",

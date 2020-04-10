@@ -6,7 +6,6 @@ import { RequestStack } from './kernel/RequestStack';
 import { ServerRequest, ServerRequestFactory } from './kernel/http/request/ServerRequest';
 import { AuriaException } from './kernel/exceptions/AuriaException';
 import { AuriaServerBootInfo } from './server/AuriaServerBootInfo';
-import { AuriaCoreSystem } from './system/AuriaCore/AuriaCoreSystem';
 import { AuriaSystem } from './default/AuriaSystem';
 import { ServerResponse } from 'aurialib2';
 
@@ -141,7 +140,7 @@ export class AuriaServer {
         this.initializeExpressApp();
 
         this.addSystem(
-            new AuriaCoreSystem(),
+            //new AuriaCoreSystem(),
             new AuriaSystem("test")
         );
 

@@ -25,6 +25,7 @@ import Knex from "knex";
 import { UserNotLoggedIn } from "./exceptions/kernel/UserNotLoggedIn";
 import { AccessRuleFactory } from "./security/access/AccessRuleFactory";
 import { AuriaException } from "./exceptions/AuriaException";
+import { EntityManager } from "./entity/EntityManager";
 
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
@@ -102,6 +103,15 @@ export abstract class System extends EventEmitter {
     protected accessPolicyEnforcer: AccessPolicyEnforcer;
 
     /**
+     * Entity Manager
+     * ----------------
+     * 
+     * Class that loads all the metadata tables from the auria system table
+     */
+    protected entityManager: EntityManager;
+
+
+    /**
      * Translations
      * ------------
      * 
@@ -132,6 +142,14 @@ export abstract class System extends EventEmitter {
         this.name = name;
 
         this.systemRequestFactory = new SystemRequestFactory();
+      
+       
+        this.entityManager = new EntityManager(this);
+        //Should not be here! Use on install routine!
+        if (Auria_ENV == "development") {
+            this.entityManager.setSystemConnection(this.getSystemConnection());
+            this.entityManager.installSchema();
+        }
         this.moduleManager = new ModuleManager(this);
         this.accessPolicyEnforcer = new AccessPolicyEnforcer(this);
         this.users = new Map();
@@ -142,7 +160,7 @@ export abstract class System extends EventEmitter {
             1 : Math.round(Math.random() * 1000000);
 
         console.log("[System] Initializing modules from system ", name);
-       
+
         this.addModule(
             // # - System related functions
             new SystemModule(this)
@@ -177,6 +195,10 @@ export abstract class System extends EventEmitter {
      */
     public abstract getAuthenticator(): SystemAuthenticator;
 
+    /**
+     * Public access to this system data steward
+     */
+    public abstract getDataSteward(): DataSteward;
     /**
      * Login User 
      * -----------

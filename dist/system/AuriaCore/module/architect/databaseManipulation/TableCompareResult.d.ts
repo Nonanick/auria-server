@@ -17,7 +17,7 @@ export declare class TableCompareResult {
         situation: TableSyncSituation;
         columns: {
             [columnName: string]: {
-                situation?: "unsynced" | "onlyInConnection" | "onlyInAuria" | "synced" | undefined;
+                situation?: "onlyInConnection" | "onlyInAuria" | "unsynced" | "synced" | undefined;
                 auria?: ConnectionColumnDefinition | undefined;
                 db?: ConnectionColumnDefinition | undefined;
             };
