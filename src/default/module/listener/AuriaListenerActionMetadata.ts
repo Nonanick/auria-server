@@ -1,5 +1,7 @@
-import { ListenerActionsMetadata, ListenerActionDataDependencies, ActionMetadata } from "../../../kernel/module/ListenerAction";
-import { AccessRuleDefinition } from "../../../kernel/security/access/AccessRule";
+import { ActionMetadata, ListenerActionDataDependencies, ListenerActionsMetadata } from "../../../kernel/module/api/ListenerAction";
+import { AccessRuleDefinition } from "../../../kernel/security/access/AccessRule.js";
+
+
 
 export interface AuriaActionMetadata extends ActionMetadata {
     accessRules?: AccessRuleDefinition[];

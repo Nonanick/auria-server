@@ -1,9 +1,9 @@
-import { ModuleListener } from "../../ModuleListener";
-import { Module } from "../../Module";
-import { ListenerAction } from "../../ListenerAction";
-import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
+import { ModuleListener } from "../../api/ModuleListener.js";
+import { Module } from "../../Module.js";
+import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata.js";
+import { ListenerAction } from "../../api/ListenerAction.js";
 export declare class TableListener extends ModuleListener {
     constructor(module: Module);
-    getExposedActionsMetadata(): AuriaListenerActionMetadata;
+    getMetadataFromExposedActions(): AuriaListenerActionMetadata;
     metadata: ListenerAction;
 }

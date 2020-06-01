@@ -1,6 +1,6 @@
-import { LoginAttempt, LoginAttempIdentification } from "./LoginAttempt";
-import { ListenerRequest } from "../../../../../http/request/ListenerRequest";
-import { LoginAttemptDenied } from "../../../exceptions/login/LoginAttemptDenied";
+import { LoginAttempt, LoginAttempIdentification } from "./LoginAttempt.js";
+import { ListenerRequest } from "../../../../../http/request/ListenerRequest.js";
+import { LoginAttemptDenied } from "../../../exceptions/login/LoginAttemptDenied.js";
 
 export class LoginAttemptManager {
 

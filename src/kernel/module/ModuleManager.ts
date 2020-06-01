@@ -1,11 +1,12 @@
-import { System } from "../System";
-import { Module } from "./Module";
-import { ModuleRowData } from "./ModuleRowData";
-import { DatabaseModule } from "./DatabaseModule/DatabaseModule";
-import { ModuleListener } from "./ModuleListener";
-import { ModuleSystemEntityName } from "../entity/systemEntities/module/Module";
+import { ModuleRowData } from "./ModuleRowData.js";
+import { DatabaseModule } from "./databaseModule/DatabaseModule.js";
+import { Module } from "./Module.js";
+import { ModuleListener } from "./api/ModuleListener.js";
+import { System } from "../System.js";
+import { ModuleResourceDefinition as ModuleD } from "../resource/systemSchema/module/ModuleResourceDefitinion.js";
+import { Bootable } from "aurialib2";
 
-export class ModuleManager {
+export class ModuleManager implements Bootable {
 
     public static getGlobalListener(module: Module, name: string): ModuleListener {
         switch (name) {
@@ -29,8 +30,10 @@ export class ModuleManager {
     constructor(system: System) {
         this.system = system;
         this.modules = new Map();
+    }
 
-        this.loadModulesFromDatabase();
+    public getBootFunction(): (() => Promise<boolean>) | (() => boolean) {
+        return () => this.loadModulesFromDatabase();
     }
 
     public hasModule(moduleName: string) {
@@ -62,9 +65,9 @@ export class ModuleManager {
                     console.log("[Module Manager] Module that persisted the merge is: ", (this.modules.get(mod.name) as Module).constructor.name);
                 } else {
                     throw new Error(
-                        "[Module Manager] Trying to add 2 times modules with the same name!\
+                        "[Module Manager] Trying to add 2 modules with the same name!\
                         And none of them is from the database!\
-                        Possibly there are two modules with the same name on the same system!"
+                        Probably there are two modules with the same name on the same system!"
                     );
                 }
             } else {
@@ -87,18 +90,24 @@ export class ModuleManager {
 
         let conn = this.system.getSystemConnection();
 
-        conn.select("name", "title", "description", "color", "icon")
-            .from(ModuleSystemEntityName)
-            .where("entry_status", "active")
+        let loaded = conn.select("_id", "name", "title", "description", "color", "icon")
+            .from(ModuleD.tableName)
+            .where(ModuleD.columns.Status.columnName, "active")
+            .where("system", this.system.name)
             .then((result) => {
                 (result as ModuleRowData[]).forEach((modData: ModuleRowData) => {
                     let dbMod = new DatabaseModule(this.system, modData.name);
-                    dbMod.setRowInfo(modData);
+                    dbMod.initializeWithDbInfo(modData);
                     this.addModule(dbMod);
                 });
+                return true;
 
-            }).catch((err) => {
-                throw new Error("[ModuleManager] SQL Error: Failed o fetch database modules!\n" + err.message);
             });
+
+        loaded.catch((err) => {
+            throw new Error("[ModuleManager] SQL Error: Failed o fetch database modules!\n" + err.message);
+        });
+
+        return loaded;
     }
 }

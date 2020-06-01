@@ -1,7 +1,6 @@
-import { System } from "../../kernel/System";
-import { AuthConfigType, AuthConfig } from "../../config/Auth";
-import { PasswordAutheticator } from "../../kernel/security/auth/PasswordAuthenticator";
-
+import { AuthConfigType, AuthConfig } from "../../config/Auth.js";
+import { System } from "../../kernel/System.js";
+import { PasswordAutheticator } from "../../kernel/security/auth/PasswordAuthenticator.js";
 
 export type UserAuthInfo = {
     user_id: number;

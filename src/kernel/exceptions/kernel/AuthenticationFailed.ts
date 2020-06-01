@@ -1,8 +1,8 @@
-import { AuriaException } from "../AuriaException";
+import { AuriaException } from "../AuriaException.js";
 
 export class AuthenticationFailed extends AuriaException {
     getCode(): string {
-        return "00041";
+        return "SYS.LOGIN.AUTHENTICATION_FAILED";
     }
 
 }

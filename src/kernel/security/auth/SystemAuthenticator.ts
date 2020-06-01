@@ -1,6 +1,6 @@
 import { Authenticator } from 'aurialib2';
 import { SystemRequest } from '../../http/request/SystemRequest';
-import { SystemUser } from '../SystemUser';
+import { SystemUser } from '../user/SystemUser';
 import { System } from '../../System';
 
 export type SystemAuthenticationCredentials = {
@@ -23,5 +23,7 @@ export abstract class SystemAuthenticator implements Authenticator {
     abstract async authenticateRequest(request : SystemRequest) : Promise<SystemUser>;
 
     public abstract generateAuthenticationToken(user : SystemUser) : string;
+
+    public abstract generateSessionToken(user : SystemUser) : string;
 
 }

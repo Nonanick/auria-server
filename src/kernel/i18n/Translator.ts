@@ -1,4 +1,4 @@
-import { System, DEFAULT_LANG, DEFAULT_LANG_VARIATION } from "../System";
+import { System, DEFAULT_LANG, DEFAULT_LANG_VARIATION } from "../System.js";
 
 export class Translator {
 

@@ -70,7 +70,7 @@ export class RequestStack {
 
         let stack: RequestStack = new RequestStack();
 
-        let urlPieces: string[] = req.url.split('/');
+        let urlPieces: string[] = req.path.split('/');
 
         let system: string = urlPieces[1] != null ? urlPieces[1] : "";
         let moduleName: string = urlPieces[2] != null ? urlPieces[2] : "";

@@ -1,7 +1,7 @@
-import { Module, TranslationsByLang } from "../Module";
-import { System } from "../../System";
-import { ModuleRequest } from "../../http/request/ModuleRequest";
 import { Response } from "express-serve-static-core";
+import { Module, TranslationsByLang } from "../Module.js";
+import { System } from "../../System.js";
+import { ModuleRequest } from "../../http/request/ModuleRequest.js";
 export declare class SystemModule extends Module {
     private __translations;
     private loginListener;

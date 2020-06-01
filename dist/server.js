@@ -1,32 +1,30 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var fs = require('fs');
-var https = require('https');
-var cors = require('cors');
+import { createServer } from 'http';
+import * as fs from 'fs';
+import { default as express } from 'express';
+import { AuriaServer } from './AuriaServer.js';
 
-var privateKey  = fs.readFileSync('F:\\Apache24\\conf\\ssl\\server.key', 'utf8');
+
+//Object.defineProperty(exports, "__esModule", { value: true });
+
+
+var privateKey = fs.readFileSync('F:\\Apache24\\conf\\ssl\\server.key', 'utf8');
 var certificate = fs.readFileSync('F:\\Apache24\\conf\\ssl\\server.crt', 'utf8');
 
-var credentials = {key: privateKey, cert: certificate};
+//var credentials = {key: privateKey, cert: certificate, rejectUnauthorized : false};
 
-var express_1 = __importDefault(require("express"));
 
-var AuriaServer_1 = require("./AuriaServer");
-var app = express_1.default();
+var app = express();
 
-app.use(cors({
-    "origin" : "https://localhost",
+/*app.use(cors({
+    "origin" : "http://app.paper.com",
     credentials: true,
-    exposedHeaders : "*"
-}));
+    exposedHeaders : ["X-Auria-Access-Token","Set-Cookie"]
+}));*/
 
-var server = new AuriaServer_1.AuriaServer(app);
+var server = new AuriaServer(app);
 server.run();
 
-var sslServer = https.createServer(credentials, app);
+var sslServer = createServer({}, app);
 
 sslServer.listen(8443);
 

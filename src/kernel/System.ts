@@ -1,32 +1,30 @@
 import { Response, NextFunction } from "express-serve-static-core";
 import { EventEmitter } from 'events';
-import { SystemRequest, SystemRequestFactory } from "./http/request/SystemRequest";
-import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
-import { ModuleManager } from "./module/ModuleManager";
-import { Module } from "./module/Module";
-import { ModuleRequestFactory } from "./http/request/ModuleRequest";
-import { RequestStack } from "./RequestStack";
-
 // Default system modules
-import { SystemModule } from "./module/SystemModule/SystemModule";
-
-import { SystemUser } from "./security/SystemUser";
-import { DataSteward, Authenticator, ServerResponse } from "aurialib2";
-import knex from 'knex';
-
+import { Authenticator, ServerResponse, BootSequence } from "aurialib2";
 // Params config import
-import { Auria_ENV } from "../AuriaServer";
-// Exceptions
-import { ModuleUnavaliable } from "./exceptions/kernel/ModuleUnavaliable";
-import { ServerRequest } from "./http/request/ServerRequest";
-import { AccessPolicyEnforcer } from "./security/access/AccessPolicyEnforcer";
-import { UnauthorizedAccess } from "./exceptions/kernel/UnauthorizedAccess";
-import Knex from "knex";
-import { UserNotLoggedIn } from "./exceptions/kernel/UserNotLoggedIn";
-import { AccessRuleFactory } from "./security/access/AccessRuleFactory";
-import { AuriaException } from "./exceptions/AuriaException";
-import { EntityManager } from "./entity/EntityManager";
 
+// Exceptions
+import { UnauthorizedAccess } from "./exceptions/kernel/UnauthorizedAccess.js";
+import Knex from "knex";
+import { SystemUser } from "./security/user/SystemUser.js";
+import { ModuleManager } from "./module/ModuleManager.js";
+import { ServerDataSteward } from "./database/dataSteward/ServerDataSteward.js";
+import { AccessPolicyEnforcer } from "./security/access/AccessPolicyEnforcer.js";
+import { ResourceManager } from "./resource/ResourceManager.js";
+import { ConnectionManager } from "./connection/ConnectionManager.js";
+import { SystemRequestFactory, SystemRequest } from "./http/request/SystemRequest.js";
+import { SystemModule } from "./module/SystemModule/SystemModule.js";
+import { Module } from "./module/Module.js";
+import { SystemAuthenticator } from "./security/auth/SystemAuthenticator.js";
+import { UserNotLoggedIn } from "./exceptions/kernel/UserNotLoggedIn.js";
+import { ModuleUnavaliable } from "./exceptions/kernel/ModuleUnavaliable.js";
+import { ModuleRequestFactory } from "./http/request/ModuleRequest.js";
+import { AuriaException } from "./exceptions/AuriaException.js";
+import { ServerRequest } from "./http/request/ServerRequest.js";
+import { RequestStack } from "./RequestStack.js";
+import { AccessRuleFactory } from "./security/access/AccessRuleFactory.js";
+import { Auria_ENV } from "../AuriaServer.js";
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
 
@@ -54,13 +52,7 @@ export abstract class System extends EventEmitter {
      */
     protected systemVersion: number;
 
-    /**
-     * Module manager
-     * 
-     * Hold all the modules from this system merging database parameters
-     * with coded parts of the module
-     */
-    protected moduleManager: ModuleManager;
+    protected boot: BootSequence;
 
     /**
      * System connection
@@ -88,7 +80,7 @@ export abstract class System extends EventEmitter {
      * DataSteward is the gateway to accessing and modifying information
      * on the database!
      */
-    protected dataSteward: DataSteward;
+    protected dataSteward: ServerDataSteward;
 
     /**
      * Access Policy Enforcer
@@ -102,14 +94,17 @@ export abstract class System extends EventEmitter {
      */
     protected accessPolicyEnforcer: AccessPolicyEnforcer;
 
-    /**
-     * Entity Manager
-     * ----------------
-     * 
-     * Class that loads all the metadata tables from the auria system table
-     */
-    protected entityManager: EntityManager;
+    protected resourceManager: ResourceManager;
 
+    protected connectionManager: ConnectionManager;
+
+    /**
+        * Module manager
+        * 
+        * Hold all the modules from this system merging database parameters
+        * with coded parts of the module
+        */
+    protected moduleManager: ModuleManager;
 
     /**
      * Translations
@@ -141,25 +136,34 @@ export abstract class System extends EventEmitter {
         console.info("[System] Creating new system: ", name);
         this.name = name;
 
-        this.systemRequestFactory = new SystemRequestFactory();
-      
-       
-        this.entityManager = new EntityManager(this);
-        //Should not be here! Use on install routine!
-        if (Auria_ENV == "development") {
-            this.entityManager.setSystemConnection(this.getSystemConnection());
-            this.entityManager.installSchema();
-        }
-        this.moduleManager = new ModuleManager(this);
-        this.accessPolicyEnforcer = new AccessPolicyEnforcer(this);
+        this.boot = new BootSequence();
         this.users = new Map();
+
+        this.systemRequestFactory = new SystemRequestFactory();
+
+        this.resourceManager = new ResourceManager(this);
+        this.moduleManager = new ModuleManager(this);
+        this.connectionManager = new ConnectionManager(this);
+        this.dataSteward = new ServerDataSteward(this.resourceManager);
+        this.accessPolicyEnforcer = new AccessPolicyEnforcer(this);
+
         this.accessPolicyEnforcer.setAccessRuleFactory(this.getAccessRuleFactory());
+
+        this.boot.addBootable("ConnectionBoot", this.connectionManager);
+        this.boot.addBootable("ResourceBoot", this.resourceManager, { 
+            dependencies: ["ConnectionBoot"] 
+        });
+        this.boot.addBootable("ModuleBoot", this.moduleManager, {
+            dependencies: ["ResourceBoot"]
+        });
 
         // If ENV == "development", systemversion does not change!
         this.systemVersion = Auria_ENV == "development" ?
             1 : Math.round(Math.random() * 1000000);
 
         console.log("[System] Initializing modules from system ", name);
+
+        this.boot.initialize();
 
         this.addModule(
             // # - System related functions
@@ -183,12 +187,12 @@ export abstract class System extends EventEmitter {
     /**
      * Build access to this system auria connection
      */
-    protected abstract buildSystemConnection(): knex;
+    protected abstract buildSystemConnection(): Knex;
 
     /**
      * Public access to this system database connection
      */
-    public abstract getSystemConnection(): knex;
+    public abstract getSystemConnection(): Knex;
 
     /**
      * Public access to this system authenticator
@@ -198,7 +202,10 @@ export abstract class System extends EventEmitter {
     /**
      * Public access to this system data steward
      */
-    public abstract getDataSteward(): DataSteward;
+    public getDataSteward(): ServerDataSteward {
+        return this.dataSteward;
+    }
+
     /**
      * Login User 
      * -----------
@@ -228,7 +235,6 @@ export abstract class System extends EventEmitter {
     public addUser(user: SystemUser, request: SystemRequest): System {
 
         user.startSession(request);
-
         this.users.set(user.getUsername(), user);
         return this;
     }
@@ -261,6 +267,10 @@ export abstract class System extends EventEmitter {
 
     public getAllModules(): Module[] {
         return this.moduleManager.getAllModules();
+    }
+
+    public getConnectionManager(): ConnectionManager {
+        return this.connectionManager;
     }
 
     public getUser(username: string): SystemUser | null {
@@ -320,6 +330,7 @@ export abstract class System extends EventEmitter {
 
         let requestResponse = module.handleRequest(moduleRequest, response);
         let resp = await this.systemResponseFactory(requestResponse, response);
+
         response.send(resp);
         return resp;
 
@@ -349,7 +360,7 @@ export abstract class System extends EventEmitter {
                     let srvResponse: ServerResponse = {
                         digest: "ok",
                         error: "",
-                        exitCode: "SYSTEM.REQUEST.SUCCESS",
+                        exitCode: "SYSTEM.REQUEST.FINISHED",
                         response: ans
                     };
                     return srvResponse;
@@ -362,7 +373,7 @@ export abstract class System extends EventEmitter {
             let srvResponse: ServerResponse = {
                 digest: "ok",
                 error: "",
-                exitCode: "SYSTEM.REQUEST.SUCCESS",
+                exitCode: "SYSTEM.REQUEST.FINISHED",
                 response: data
             };
             return srvResponse;

@@ -1,9 +1,9 @@
-import { AccessRuleFactory } from "../../../kernel/security/access/AccessRuleFactory";
-import { ResourceAccessRuleList } from "../../../kernel/security/access/ResourceAccessRuleList";
-import { AuriaActionMetadata } from "../../module/listener/AuriaListenerActionMetadata";
-import { AuriaSystem } from "../../AuriaSystem";
-import { AccessRule } from "../../../kernel/security/access/AccessRule";
-import { AccessRuleCondition } from "../../../kernel/security/access/ResourceAccessRule";
+import { AuriaSystem } from "../../AuriaSystem.js";
+import { AuriaActionMetadata } from "../../module/listener/AuriaListenerActionMetadata.js";
+import { AccessRuleFactory } from "../../../kernel/security/access/AccessRuleFactory.js";
+import { ResourceAccessRuleList } from "../../../kernel/security/access/ResourceAccessRuleList.js";
+import { AccessRule } from "../../../kernel/security/access/AccessRule.js";
+import { AccessRuleCondition } from "../../../kernel/security/access/ResourceAccessRule.js";
 
 export class AuriaAccessRuleFactory {
 
@@ -51,7 +51,7 @@ export class AuriaAccessRuleFactory {
 
         let condition: AccessRuleCondition = async (context) => {
 
-            let userRoleIds = await context.user.getUserAccessRoleIds();
+            let userRoleIds = await context.user.getUserAccessibleRoleIds();
 
             return this.system.getSystemConnection()
                 .select("resource_name", "parameters")
@@ -80,7 +80,7 @@ export class AuriaAccessRuleFactory {
 
         let condition: AccessRuleCondition = async (context) => {
 
-            let userRoleIds = await context.user.getUserAccessRoleIds();
+            let userRoleIds = await context.user.getUserAccessibleRoleIds();
 
             return this.system.getSystemConnection()
                 .select("resource_name", "parameters")

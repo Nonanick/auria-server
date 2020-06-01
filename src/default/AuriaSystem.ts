@@ -1,12 +1,18 @@
-import Knex = require("knex");
-import { SystemConfig } from "./SystemConfig";
-import { AuriaSystemAuthenticator } from "./security/AuriaSystemAutheticator";
-import { AuriaAccessRuleFactory } from "./security/access/AuriaAccessRuleFactory";
+import { default as Knex } from "knex";
 import { Response, NextFunction } from "express-serve-static-core";
-import { AuriaDataSteward } from "./data/AuriaDataSteward";
-import { AuriaDataReader } from "./data/provider/AuriaDataReader";
-import { AuriaDataWriter } from "./data/writer/AuriaDataWriter";
-import { System, AccessRuleFactory, SystemRequest, PasswordAutheticator, UserNotLoggedIn, SystemUser, AuthenticationFailed} from '../kernel/AuriaKernel';
+import { AuriaAccessRuleFactory } from "./security/access/AuriaAccessRuleFactory.js";
+import { SystemConfig } from "./SystemConfig.js";
+import { AuriaSystemAuthenticator } from "./security/AuriaSystemAutheticator.js";
+import { AuriaDataSteward } from "./data/AuriaDataSteward.js";
+import { SessionResourceDefinition } from "../kernel/resource/systemSchema/session/SessionResourceDefinition.js";
+import { System } from "../kernel/System.js";
+import { AccessRuleFactory } from "../kernel/security/access/AccessRuleFactory.js";
+import { PasswordAutheticator } from "../kernel/security/auth/PasswordAuthenticator.js";
+import { SystemRequest } from "../kernel/http/request/SystemRequest.js";
+import { SystemUser } from "../kernel/security/user/SystemUser.js";
+import { UserNotLoggedIn } from "../kernel/exceptions/kernel/UserNotLoggedIn.js";
+import { LoginListener } from "../kernel/module/SystemModule/listeners/LoginListener.js";
+import { AuthenticationFailed } from "../kernel/exceptions/kernel/AuthenticationFailed.js";
 
 export class AuriaSystem extends System {
 
@@ -90,18 +96,20 @@ export class AuriaSystem extends System {
 
     private buildSystemDataSteward(): AuriaDataSteward {
 
-        const newSteward = new AuriaDataSteward();
+        const newSteward = new AuriaDataSteward(this.resourceManager);
 
-        const dataProvider = new AuriaDataReader();
-        const dataWriter = new AuriaDataWriter();
+        // const dataProvider = new AuriaDataReader(this);
+        // const dataWriter = new AuriaDataWriter();
 
-        newSteward.setProvider(dataProvider);
-        newSteward.setWriter(dataWriter);
+        // newSteward.setProvider(dataProvider);
+        //  newSteward.setWriter(dataWriter);
 
         //For now prevent modifying the writer/provider
         newSteward
             .lockProvider()
             .lockWriter();
+
+        this.dataSteward = newSteward;
 
         return this.dataSteward;
     }
@@ -150,29 +158,36 @@ export class AuriaSystem extends System {
 
         let tokenInfo = this.getAuthenticator().validateToken(token);
 
+        let sessionToken = request.getCookie(LoginListener.COOKIE_SESSION_TOKEN);
+
         if (!tokenInfo.valid) {
+            console.error("[AuriaSystem] Failed to verify token signature!");
             throw new AuthenticationFailed("Failed to validate authentication token!");
         }
 
         let sessionConsult = this.getSystemConnection()
-            .select("_id")
-            .from("sessions")
+            .select(SessionResourceDefinition.columns.ID.columnName)
+            .from(SessionResourceDefinition.tableName)
             .where({
-                user: tokenInfo.authInfo!.username,
+                username: tokenInfo.authInfo!.username,
                 machine_ip: request.getIp(),
                 user_agent: request.getUserAgent(),
-                token: token,
-                system: request.getSystemName()
+                token: sessionToken,
+                system: request.getSystemName(),
+                entry_status: "active"
             })
             .then((res) => {
                 if (res.length == 1) {
-                    let nUser = new SystemUser(request.getSystem(), tokenInfo.authInfo!.username);
+                    let nUser = new SystemUser(this, tokenInfo.authInfo!.username);
                     nUser.setId(tokenInfo.authInfo!.user_id);
-                    request.getSystem().loginUser(nUser, request);
+                    nUser.setAccessToken(token);
+                    this.loginUser(nUser, request);
                     return nUser;
                 }
-                else
+                else {
+                    console.error("[AuriaSystem] Session returned an incorrect amount of rows!", res);
                     throw new AuthenticationFailed("Failed to validate token session!");
+                }
             });
 
         sessionConsult.catch(

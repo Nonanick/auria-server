@@ -1,19 +1,33 @@
-import { ListenerRequest } from "../../../http/request/ListenerRequest";
 import { CookieOptions } from "express-serve-static-core";
-import { ModuleRequest } from "../../../http/request/ModuleRequest";
 import { Response } from "express";
-import { System } from "../../../System";
-import { SystemUser } from "../../../security/SystemUser";
+import { ListenerRequest } from "../../../http/request/ListenerRequest.js";
+import { System } from "../../../System.js";
+import { ModuleRequest } from "../../../http/request/ModuleRequest.js";
+/**
+ * Login Request
+ * --------------
+ * An extension of the Express Request Object crafted for the Login Listener routines
+ * Exposes some methods usually not avaliable to all ListenerActions
+ */
 export interface LoginRequest extends ListenerRequest {
     setCookie: (name: string, value: string, options: CookieOptions) => void;
-    /**
-     *
-     */
-    loginWithPassword: (username: string, password: string, loginRequest: LoginRequest) => Promise<SystemUser>;
+    setHeader: (name: string, value: string) => void;
+    getSystem: () => System;
+    writeHeader: (key: string, value: string) => void;
+    headerStatus: (code: number) => void;
 }
+/**
+ * Login Request Factory
+ * ----------------------
+ * Extends an ModuleRequest object adding some functions necessary for the Login
+ * Listener routines
+ */
 export declare class LoginRequestFactory {
     static make(request: ModuleRequest, response: Response, system: System): ModuleRequest & {
         setCookie: (name: string, value: string, options: CookieOptions) => Response<any>;
-        loginWithPassword: (username: string, password: string, request: LoginRequest) => Promise<SystemUser>;
+        getSystem: (_: any) => System;
+        setHeader: (key: any, value: any) => void;
+        writeHeader: (key: any, value: any) => Response<any>;
+        headerStatus: (code: number) => Response<any>;
     };
 }

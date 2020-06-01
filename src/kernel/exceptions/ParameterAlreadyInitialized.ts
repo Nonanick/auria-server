@@ -1,4 +1,4 @@
-import { AuriaException } from "./AuriaException";
+import { AuriaException } from "./AuriaException.js";
 
 export class ParameterAlreadyInitialized extends AuriaException {
 

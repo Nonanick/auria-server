@@ -1,10 +1,13 @@
-import { Table } from "../structure/table/Table";
+import { Resource } from "../../resource/Resource.js";
 
 export type SQLOperators = "=" | "!=" | "<" | "<=" | "LIKE" | "NOT LIKE" | ">" | ">=" | "<>" | "IN" | "NOT IN";
 
 export class QueryFilter {
+    setTable(table: import("knex").Table<any, any>) {
+        throw new Error("Method not implemented.");
+    }
 
-    protected table : Table;
+    protected resource : Resource;
 
     protected values: any[] = [];
 
@@ -49,7 +52,7 @@ export class QueryFilter {
     public getSQL(): string {
 
         let query = "( "
-         + (this.table == null ? "" : "`" + this.table.table + "`.") 
+         + (this.resource == null ? "" : "`" + this.resource.tableName + "`.") 
          + "`" + this.columnName + "` " 
          + this.operator + " " 
          + this.value + " ) ";
@@ -64,8 +67,8 @@ export class QueryFilter {
         return this.columnName;
     }
 
-    public setTable(table : Table) {
-        this.table = table;
+    public setResource(table : Resource) {
+        this.resource = table;
         return this;
     }
 }

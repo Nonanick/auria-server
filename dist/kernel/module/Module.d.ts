@@ -1,16 +1,26 @@
-import { System } from "../System";
-import { ModuleListener } from "./ModuleListener";
-import { SystemUser } from "../security/SystemUser";
-import { ModuleRequest } from "../http/request/ModuleRequest";
+/// <reference types="node" />
+import { EventEmitter } from 'events';
 import { Response } from "express-serve-static-core";
-export declare abstract class Module {
+import { ModuleInterface } from './interface/ModuleInterface.js';
+import { ModulePageDataRequirements, ModulePageActionRequirements } from './interface/requirements/ModulePageRequirements.js';
+import { ModuleListener } from './api/ModuleListener.js';
+import { System } from '../System.js';
+import { SystemUser } from '../security/user/SystemUser.js';
+import { ModuleRequest } from '../http/request/ModuleRequest.js';
+export declare abstract class Module extends EventEmitter {
+    protected _name: string;
+    protected _title: string;
+    protected _description: string;
+    protected _color: string;
+    protected _icon: string;
     /**
      * Name
      * -----
      *
      * Unique identifier of this module
      */
-    name: string;
+    get name(): string;
+    set name(name: string);
     /**
      * Title
      * ------
@@ -20,7 +30,8 @@ export declare abstract class Module {
      *
      * @example 'Auria @{Module.Name.Title}'
      */
-    title: string;
+    get title(): string;
+    set title(title: string);
     /**
      * Description
      * -----------
@@ -30,7 +41,8 @@ export declare abstract class Module {
      *
      * @example 'Auria @{Module.Name.Description}
      */
-    description: string;
+    get description(): string;
+    set description(description: string);
     /**
      * Color
      * ------
@@ -40,14 +52,17 @@ export declare abstract class Module {
      *
      * @example '#098A41'
      */
-    color: string;
+    get color(): string;
+    set color(color: string);
     /**
      * Icon
      * -----
      *
      * Path to an icon in the front server
      */
-    icon: string;
+    get icon(): string;
+    set icon(icon: string);
+    protected interface: ModuleInterface;
     /**
      * System
      * -------
@@ -56,12 +71,12 @@ export declare abstract class Module {
      */
     protected system: System;
     /**
-     * Listener
+     * Module Listener
      * --------
      *
      * All the listeners assigned to this module
      */
-    protected listeners: Map<string, ModuleListener>;
+    protected moduleListeners: Map<string, ModuleListener>;
     constructor(system: System, name: string);
     /**
      * Has Listener
@@ -78,13 +93,14 @@ export declare abstract class Module {
      */
     getListener(listenerName: string): ModuleListener | undefined;
     getAllListeners(): ModuleListener[];
+    getInterface(): ModuleInterface;
     /**
      * Add Multiple Listeners to this Module
      * --------------------------------------
      *
      * @param listeners
      */
-    addListener(...listeners: ModuleListener[]): void;
+    addModuleListener(...listeners: ModuleListener[]): void;
     /**
      * Return th system associated to this module
      */
@@ -93,13 +109,33 @@ export declare abstract class Module {
      * Module: Data Permission
      * ---------------------------
      *
-     * Inform what data permissions this module
+     * Inform what data permissions this module API
+     * needs
      *
      */
     getModuleDataPermissions(): {
         [tableName: string]: string[];
     };
     getTable(user: SystemUser, table: string): void;
+    /**
+     * Get Data Requirements
+     * ---------------------
+     *
+     * Get necessary *Data Resources* needed to run the Module!
+     *
+     *
+     */
+    getDataRequirements(): ModulePageDataRequirements;
+    /**
+     * Get API Requirements
+     * ---------------------
+     *
+     * Get necessary *Listener Actions* needed to run the Module!
+     *
+     */
+    getApiRequirements(): ModulePageActionRequirements;
+    mergeModulePageApiRequirement(req1: ModulePageActionRequirements, req2: ModulePageActionRequirements): ModulePageActionRequirements;
+    mergeModulePageDataRequirement(req1: ModulePageDataRequirements, req2: ModulePageDataRequirements): ModulePageDataRequirements;
     protected abstract loadTranslations(): TranslationsByLang;
     getTranslations(): TranslationsByLang;
     handleRequest(request: ModuleRequest, response: Response): Promise<any>;
@@ -109,3 +145,10 @@ export declare type TranslationsByLang = {
         [key: string]: string;
     };
 };
+export declare enum ModuleEvents {
+    NAME_CHANGED = "nameChanged",
+    TITLE_CHANGED = "titleChanged",
+    DESCRIPTION_CHANGED = "descriptionChanged",
+    ICON_CHANGED = "iconChanged",
+    COLOR_CHANGED = "colorChanged"
+}

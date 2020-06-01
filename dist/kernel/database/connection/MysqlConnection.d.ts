@@ -1,5 +1,5 @@
-import { AuriaConnection } from "./AuriaConnection";
 import { Connection, Pool } from "mysql";
+import { AuriaConnection } from "./AuriaConnection.js";
 export declare class MysqlConnection extends AuriaConnection {
     static MAX_NUMBER_OF_CONNECTIONS: number;
     /**

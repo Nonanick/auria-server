@@ -1,7 +1,8 @@
-import { Table } from "../structure/table/Table";
+import { Resource } from "../../resource/Resource.js";
 export declare type SQLOperators = "=" | "!=" | "<" | "<=" | "LIKE" | "NOT LIKE" | ">" | ">=" | "<>" | "IN" | "NOT IN";
 export declare class QueryFilter {
-    protected table: Table;
+    setTable(table: import("knex").Table<any, any>): void;
+    protected resource: Resource;
     protected values: any[];
     protected operator: SQLOperators;
     protected columnName: string;
@@ -15,5 +16,5 @@ export declare class QueryFilter {
     getSQL(): string;
     getValues(): any[];
     getColumnName(): string;
-    setTable(table: Table): this;
+    setResource(table: Resource): this;
 }

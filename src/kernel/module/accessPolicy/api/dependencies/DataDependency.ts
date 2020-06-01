@@ -1,4 +1,4 @@
-import { DataFilter } from "aurialib2/data/filter/DataFilter";
+import { DataFilter } from "aurialib2/dist/data/filter/DataFilter";
 
 export interface DataDependency {
     name : string;

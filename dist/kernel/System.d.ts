@@ -1,20 +1,21 @@
 /// <reference types="node" />
 import { Response, NextFunction } from "express-serve-static-core";
 import { EventEmitter } from 'events';
-import { SystemRequest, SystemRequestFactory } from "./http/request/SystemRequest";
-import { SystemAuthenticator } from "./security/auth/SystemAuthenticator";
-import { ModuleManager } from "./module/ModuleManager";
-import { Module } from "./module/Module";
-import { RequestStack } from "./RequestStack";
-import { SystemUser } from "./security/SystemUser";
-import { DataSteward, Authenticator, ServerResponse } from "aurialib2";
-import knex from 'knex';
-import { ServerRequest } from "./http/request/ServerRequest";
-import { AccessPolicyEnforcer } from "./security/access/AccessPolicyEnforcer";
+import { Authenticator, ServerResponse, BootSequence } from "aurialib2";
 import Knex from "knex";
-import { AccessRuleFactory } from "./security/access/AccessRuleFactory";
-import { AuriaException } from "./exceptions/AuriaException";
-import { EntityManager } from "./entity/EntityManager";
+import { SystemUser } from "./security/user/SystemUser.js";
+import { ModuleManager } from "./module/ModuleManager.js";
+import { ServerDataSteward } from "./database/dataSteward/ServerDataSteward.js";
+import { AccessPolicyEnforcer } from "./security/access/AccessPolicyEnforcer.js";
+import { ResourceManager } from "./resource/ResourceManager.js";
+import { ConnectionManager } from "./connection/ConnectionManager.js";
+import { SystemRequestFactory, SystemRequest } from "./http/request/SystemRequest.js";
+import { Module } from "./module/Module.js";
+import { SystemAuthenticator } from "./security/auth/SystemAuthenticator.js";
+import { AuriaException } from "./exceptions/AuriaException.js";
+import { ServerRequest } from "./http/request/ServerRequest.js";
+import { RequestStack } from "./RequestStack.js";
+import { AccessRuleFactory } from "./security/access/AccessRuleFactory.js";
 export declare const DEFAULT_LANG = "en";
 export declare const DEFAULT_LANG_VARIATION = "us";
 export declare abstract class System extends EventEmitter {
@@ -35,13 +36,7 @@ export declare abstract class System extends EventEmitter {
      *
      */
     protected systemVersion: number;
-    /**
-     * Module manager
-     *
-     * Hold all the modules from this system merging database parameters
-     * with coded parts of the module
-     */
-    protected moduleManager: ModuleManager;
+    protected boot: BootSequence;
     /**
      * System connection
      * ------------------
@@ -66,7 +61,7 @@ export declare abstract class System extends EventEmitter {
      * DataSteward is the gateway to accessing and modifying information
      * on the database!
      */
-    protected dataSteward: DataSteward;
+    protected dataSteward: ServerDataSteward;
     /**
      * Access Policy Enforcer
      * ----------------------
@@ -78,13 +73,15 @@ export declare abstract class System extends EventEmitter {
      * all of this Access Policies and applies them in each Request!
      */
     protected accessPolicyEnforcer: AccessPolicyEnforcer;
+    protected resourceManager: ResourceManager;
+    protected connectionManager: ConnectionManager;
     /**
-     * Entity Manager
-     * ----------------
-     *
-     * Class that loads all the metadata tables from the auria system table
-     */
-    protected entityManager: EntityManager;
+        * Module manager
+        *
+        * Hold all the modules from this system merging database parameters
+        * with coded parts of the module
+        */
+    protected moduleManager: ModuleManager;
     /**
      * Translations
      * ------------
@@ -115,11 +112,11 @@ export declare abstract class System extends EventEmitter {
     /**
      * Build access to this system auria connection
      */
-    protected abstract buildSystemConnection(): knex;
+    protected abstract buildSystemConnection(): Knex;
     /**
      * Public access to this system database connection
      */
-    abstract getSystemConnection(): knex;
+    abstract getSystemConnection(): Knex;
     /**
      * Public access to this system authenticator
      */
@@ -127,7 +124,7 @@ export declare abstract class System extends EventEmitter {
     /**
      * Public access to this system data steward
      */
-    abstract getDataSteward(): DataSteward;
+    getDataSteward(): ServerDataSteward;
     /**
      * Login User
      * -----------
@@ -164,6 +161,7 @@ export declare abstract class System extends EventEmitter {
     addModule(...modules: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
+    getConnectionManager(): ConnectionManager;
     getUser(username: string): SystemUser | null;
     isUserLoggedIn(username: string): boolean;
     removeUser(username: string): boolean;

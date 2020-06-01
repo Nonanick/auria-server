@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,78 +7,349 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const ModuleListener_1 = require("../../ModuleListener");
-const LogoutFailed_1 = require("../exceptions/login/LogoutFailed");
-const LoginFailed_1 = require("../exceptions/login/LoginFailed");
-const LoginAttemptManager_1 = require("./actions/login/LoginAttemptManager");
-// # - Login Action Metadata
-const LoginActionDefinition_1 = require("./actions/login/LoginActionDefinition");
-const LogoutActionDefinition_1 = require("./actions/logout/LogoutActionDefinition");
-class LoginListener extends ModuleListener_1.ModuleListener {
-    constructor(module) {
-        super(module, "Login");
-        this.login = (req) => __awaiter(this, void 0, void 0, function* () {
-            let loginReq = req;
-            let username = req.getRequiredParam('username');
-            let currentAttempt = this.loginAttemptManager.requestLoginAttempt(loginReq);
-            // Login with password
-            if (req.hasParam('password')) {
-                let password = req.getRequiredParam('password');
-                return loginReq
-                    .loginWithPassword(username, password, loginReq)
-                    .then((user) => {
-                    // Login successfull
-                    currentAttempt.success = true;
-                    let attempts = this.loginAttemptManager.clearLoginAttempts(loginReq);
-                    return {
-                        message: "Login Successful!",
-                        attempts: attempts,
-                        username: user.getUsername(),
-                        system: req.getRequestStack().system()
-                    };
-                }).catch((err) => {
-                    throw err;
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { LoginAttemptManager } from './actions/login/LoginAttemptManager.js';
+import { LoginActionMetadata } from './actions/login/LoginActionDefinition.js';
+import { LogoutActionMetadata } from './actions/logout/LogoutActionDefinition.js';
+import { Auria_ENV } from '../../../../AuriaServer.js';
+import { LoginFailed } from '../exceptions/login/LoginFailed.js';
+import { PasswordAutheticator } from '../../../security/auth/PasswordAuthenticator.js';
+import { LogoutFailed } from '../exceptions/login/LogoutFailed.js';
+import { AuthConfig } from '../../../../config/Auth.js';
+import { SessionResourceDefinition as Session } from '../../../resource/systemSchema/session/SessionResourceDefinition.js';
+import { UserResourceDefinition as User } from '../../../resource/systemSchema/user/UserResourceDefinition.js';
+import { ModuleListener } from '../../api/ModuleListener.js';
+import { SystemUser } from '../../../security/user/SystemUser.js';
+import { HandshakeFailed } from '../exceptions/login/HandshakeFailed.js';
+let LoginListener = /** @class */ (() => {
+    class LoginListener extends ModuleListener {
+        constructor(module) {
+            super(module, "Login");
+            /**
+             * Login [Public]
+             * ---------------
+             *
+             * Public method login will authenticate a combination of username + password
+             * and subscribe the user to the system allowing requisitions signed with said
+             * user will be able to be processed
+             *
+             */
+            this.login = (req) => __awaiter(this, void 0, void 0, function* () {
+                const loginReq = req;
+                const username = req.getRequiredParam('username');
+                //# - Check if this login attempt is valid (max tries exceeded, etc...)
+                const currentAttempt = this.loginAttemptManager.requestLoginAttempt(loginReq);
+                // Login with password
+                if (req.hasParam('password')) {
+                    let password = req.getRequiredParam('password');
+                    return this.
+                        __checkLoginCredentials(loginReq, username, password)
+                        .then(authDetails => this.__subscribeUserToSystem(loginReq, authDetails))
+                        .then(_ => this.__prepareLoginResponseHeaders(loginReq, username))
+                        .then(_ => {
+                        //Keep signed in?
+                        if (loginReq.hasParam("keep-signed-in"))
+                            this.__saveUserSession(loginReq);
+                    })
+                        .then(() => {
+                        let user = req.getUser();
+                        // Login successfull
+                        currentAttempt.success = true;
+                        let attempts = this.loginAttemptManager.clearLoginAttempts(loginReq);
+                        return {
+                            message: "Login Successful!",
+                            attempts: attempts,
+                            username: user.getUsername(),
+                            system: req.getRequestStack().system()
+                        };
+                    })
+                        .catch((err) => {
+                        // Login failed
+                        throw err;
+                    });
+                }
+                else {
+                    throw new LoginFailed("Insufficient parameters passed!");
+                }
+            });
+            /**
+             * Check Login Credentials
+             * -----------------------
+             *
+             * Privatly used by public method "login", will try to authenticate
+             * a combination of username + password on this system DB
+             *
+             * If the combinations succeeds a resolved promise with *SystemAuthLoginDetails* is returned
+             * if it fails a rejected promise is returned
+             */
+            this.__checkLoginCredentials = (req, username, password) => {
+                return req
+                    .getSystem()
+                    .getAuthenticator()
+                    .authenticate({
+                    username: username,
+                    password: password
                 });
-            }
-            else {
-                throw new LoginFailed_1.LoginFailed("Insufficient parameters passed!");
-            }
-        });
-        this.logout = (req) => {
-            let loginReq = req;
-            let username = req.getRequiredParam("username");
-            let cookie = req.getCookie('AURIA_UA_USERNAME');
-            //let handshake = req.getCookie('AURIA_UA_HANDSHAKE');
-            if (username == cookie) {
-                loginReq.setCookie("AURIA_UA_USERNAME", "", {
-                    expires: new Date(),
+            };
+            /**
+             * Subscribe User to System
+             * --------------------------
+             *
+             * Creates a new *SystemUser* based on the *SystemLoginAuthDetails*
+             * returned by the authentication method
+             *
+             */
+            this.__subscribeUserToSystem = (req, userInfo) => {
+                // Initialize SystemUser object
+                let logInUser = new SystemUser(req.getSystem(), userInfo.username);
+                logInUser.setId(userInfo.id);
+                logInUser.setAccessLevel(userInfo.userType);
+                //Add it to the system!
+                req.getSystem().loginUser(logInUser, req);
+                // Replace 'getUser' in the request object
+                req.getUser = () => logInUser;
+            };
+            /**
+             * Prepare Login Response Headers
+             * -------------------------------
+             *
+             * Prepare the httpOnly Cookies containing the username AND refresh token
+             * in case a 'keep-signed-in' parameter was passed
+             *
+             * RefreshToken will expiry after a month after login!
+             *
+             */
+            this.__prepareLoginResponseHeaders = (req, username) => {
+                // Send back authentication token
+                let token = req.getSystem().getAuthenticator().generateAuthenticationToken(req.getUser());
+                req.setCookie(LoginListener.COOKIE_USER_NAME, username, {
+                    maxAge: 1000 * 60 * 60 * 24 * 30,
+                    httpOnly: false,
+                    sameSite: "strict",
+                    secure: true
+                });
+                req.getUser().setAccessToken(token);
+                req.setHeader(PasswordAutheticator.AUTHENTICATOR_JWT_HEADER_NAME, token);
+            };
+            /**
+             * Save User Session
+             * -----------------
+             *
+             * Called when the "keep-signed-in" parameter is passed with a login request
+             * A new session will be stored in the DB and a httpOnly Cookie will be generated
+             * When the API need to retrieve an Access Token this method is accessed out of the SPA
+             * context so the httpOnly Cookie can be passed along!
+             */
+            this.__saveUserSession = (req) => {
+                let token = req.getSystem().getAuthenticator().generateSessionToken(req.getUser());
+                let sessionInfo = {
+                    username: req.getUser().getUsername(),
+                    login_time: req.getUser().getLoginTimeAsDate(),
+                    machine_ip: req.getIp(),
+                    token: token,
+                    system: req.getSystem().name,
+                    client: 'node-server',
+                    user_agent: req.getUser().getUserAgent()
+                };
+                req.setCookie(LoginListener.COOKIE_SESSION_TOKEN, token, {
+                    secure: true,
+                    sameSite: "strict",
                     httpOnly: true
                 });
-                loginReq.setCookie("AURIA_UA_HANDSHAKE", "", {
-                    expires: new Date(),
-                    httpOnly: true
+                req.getSystem().getSystemConnection()
+                    .insert(sessionInfo)
+                    .into(Session.tableName)
+                    .then((ids) => {
+                    console.log("[LoginRequest] Keep signed in option! Recorded in sessions! ID: ", ids);
+                }).catch(error => {
+                    console.error("[LoginRequest] Failed to record session in database!", error);
                 });
-                this.module.getSystem().removeUser(username);
-                return { "logout": true };
+            };
+            /**
+             * Logout [Public]
+             * ----------------
+             */
+            this.logout = (req) => {
+                let loginReq = req;
+                let username = req.getUser().getUsername();
+                let cookie = req.getCookie(LoginListener.COOKIE_USER_NAME);
+                if (username == cookie) {
+                    this.__destroyAllCookies(loginReq);
+                    loginReq.getSystem().getSystemConnection()
+                        .update(Session.columns.Status.columnName, "inactive")
+                        .from(Session.tableName)
+                        .where(Session.columns.Username.columnName, username)
+                        .then((ans) => {
+                        console.log("[LoginListener] Updating Session! Setting as inactive!", ans);
+                    })
+                        .catch((err) => {
+                        console.error("[LoginListener] Failed to update Session status!", err);
+                    });
+                    this.module.getSystem().removeUser(username);
+                    return { "logout": true };
+                }
+                else {
+                    throw new LogoutFailed("Server information does not match the request");
+                }
+            };
+            this.__destroyAllCookies = (req) => {
+                let expiredDate = new Date();
+                expiredDate.setTime(0);
+                req.setCookie(LoginListener.COOKIE_USER_NAME, "", {
+                    expires: expiredDate
+                });
+                req.setCookie(LoginListener.COOKIE_ACCESS_TOKEN, "", {
+                    expires: expiredDate
+                });
+            };
+            this.handshake = (req) => __awaiter(this, void 0, void 0, function* () {
+                console.log("[Handshake] Status: ", req.cookies[LoginListener.COOKIE_SESSION_TOKEN]);
+                const loginReq = req;
+                const sessionToken = req.cookies[LoginListener.COOKIE_SESSION_TOKEN];
+                const callbackURL = req.getParam("sendBack") == "" ? "/" : req.getParam("sendBack");
+                //# - Will ALWAYS redirect user, most requests are HTTP not XHR
+                loginReq.writeHeader("Location", callbackURL || '/');
+                loginReq.headerStatus(302);
+                // # - If there's no Session token, cleanup all tokens ans redirect
+                if (sessionToken == null) {
+                    this.__destroyAllCookies(loginReq);
+                    return false;
+                }
+                else {
+                    // Check session
+                    let info;
+                    try {
+                        info = this.__checkSessionTokenPayload(sessionToken);
+                        // Will throw an error if it does not!
+                        this.__checkSessionSender(loginReq, info);
+                    }
+                    catch (err) {
+                        this.__destroyAllCookies(loginReq);
+                        throw new HandshakeFailed("Failed to verify token signature!");
+                    }
+                    console.log("[LoginListener] Handshake Token Info!", info);
+                    let verifyDb = yield this.__verifyDatabaseSessionToken(loginReq, info, sessionToken);
+                    if (verifyDb) {
+                        //# - Session token is valid but user is not "logged in"
+                        if (!loginReq.getSystem().isUserLoggedIn(info.username)) {
+                            try {
+                                yield loginReq.getSystem().getSystemConnection()
+                                    .select(User.columns.ID.columnName, User.columns.UserPrivilege.columnName)
+                                    .from(User.tableName)
+                                    .where(User.columns.Username.columnName, info.username)
+                                    .then((res) => {
+                                    if (res.length != 1) {
+                                        throw new HandshakeFailed("Failed to pinpoint user!");
+                                    }
+                                    let userInfo = res[0];
+                                    this.__subscribeUserToSystem(loginReq, {
+                                        id: userInfo[User.columns.ID.columnName],
+                                        username: info.username,
+                                        userType: userInfo[User.columns.UserPrivilege.columnName]
+                                    });
+                                })
+                                    .catch((err) => {
+                                    console.error("[LoginListener] Handshake! Failed to login user from session!", err);
+                                    throw new HandshakeFailed("Failed to recognize user!");
+                                });
+                            }
+                            catch (err) {
+                                this.__destroyAllCookies(loginReq);
+                                console.error("[LoginListener] Failed to retrieve information from user! Could not login from session handshake");
+                                throw new HandshakeFailed("Failed to login user into the system!");
+                            }
+                        }
+                        let nToken = loginReq.getSystem().getAuthenticator().generateAuthenticationToken(req.getUser());
+                        req.getUser().setAccessToken(nToken);
+                        console.log("[LoginListener] Handshake suceeded! Will now generate token!", nToken);
+                        loginReq.setCookie(LoginListener.COOKIE_ACCESS_TOKEN, nToken, {
+                            secure: true,
+                            sameSite: true,
+                            httpOnly: false,
+                        });
+                        return true;
+                    }
+                    else {
+                        console.log("[LoginListener] Failed to verify session token with DB token!");
+                    }
+                }
+                return false;
+            });
+            this.hashPassword = (req) => {
+                let pass = req.getRequiredParam('password');
+                return bcrypt.hash(pass, AuthConfig.bcrypt);
+            };
+            this.loginAttemptManager = new LoginAttemptManager();
+        }
+        getMetadataFromExposedActions() {
+            let actions = {
+                "login": LoginActionMetadata,
+                "logout": LogoutActionMetadata,
+                "handshake": {
+                    DISABLE_BLACKLIST_RULE: true,
+                    DISABLE_WHITELIST_RULE: true
+                }
+            };
+            if (Auria_ENV == "development") {
+                // - HashPassword, utility to generate DB bcrypt password to be stored, exposed on DEV environments
+                Object.assign(actions, {
+                    "hashPassword": {
+                        DISABLE_BLACKLIST_RULE: true,
+                        DISABLE_WHITELIST_RULE: true,
+                    }
+                });
             }
-            else {
-                throw new LogoutFailed_1.LogoutFailed("Server information does not match the request");
+            return actions;
+        }
+        __checkSessionTokenPayload(token) {
+            const sessionInfo = jwt.verify(token, AuthConfig.jwtSecret);
+            return sessionInfo;
+        }
+        __checkSessionSender(req, info) {
+            if (req.getIp() != info.machine_ip) {
+                console.error("[LoginListener] Handshake Failed! Machine IP does not match!", req.getIp(), info.machine_ip);
+                throw new HandshakeFailed("Invalid Session Cookie!");
             }
-        };
-        this.loginAttemptManager = new LoginAttemptManager_1.LoginAttemptManager();
+            if (req.getUserAgent() != info.user_agent) {
+                console.error("[LoginListener] Handshake Failed! User Agent does not match!", req.getUserAgent(), info.user_agent);
+                throw new HandshakeFailed("Invalid Session Cookie");
+            }
+            return true;
+        }
+        __verifyDatabaseSessionToken(req, info, sessionToken) {
+            return __awaiter(this, void 0, void 0, function* () {
+                //# - Get last Session ordered by login time and check if the token used is the same
+                return req.getSystem().getSystemConnection()
+                    .select(Session.columns.Username.columnName, Session.columns.Token.columnName)
+                    .from(Session.tableName)
+                    .where(Session.columns.Username.columnName, info.username)
+                    .where(Session.columns.Status.columnName, "active")
+                    .orderBy(Session.columns.LoginTime.columnName, "desc")
+                    .limit(1)
+                    .then((dbInfo) => {
+                    if (dbInfo.length == 1) {
+                        if (dbInfo[0].token == sessionToken) {
+                            console.log("[LoginListener] Last user session matched with token!", sessionToken);
+                            return true;
+                        }
+                        else {
+                            console.log("[LoginListener] Last user session does NOT match with token!", sessionToken, dbInfo[0]);
+                        }
+                    }
+                    return false;
+                });
+            });
+        }
     }
-    getExposedActionsMetadata() {
-        return {
-            "login": LoginActionDefinition_1.LoginActionMetadata,
-            "logout": LogoutActionDefinition_1.LogoutActionMetadata,
-        };
-    }
-}
-exports.LoginListener = LoginListener;
-/**
- * Amount of time required to complete
- * the login request
- */
-LoginListener.LOGIN_LISTENER_DELAY_LOGIN_ATTEMPT = 1000;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTG9naW5MaXN0ZW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uLy4uLy4uLy4uL3NyYy9rZXJuZWwvbW9kdWxlL1N5c3RlbU1vZHVsZS9saXN0ZW5lcnMvTG9naW5MaXN0ZW5lci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7OztBQUFBLHlEQUFzRDtBQUd0RCxtRUFBZ0U7QUFDaEUsaUVBQThEO0FBQzlELDZFQUEwRTtBQUkxRSw0QkFBNEI7QUFDNUIsaUZBQTRFO0FBQzVFLG9GQUErRTtBQUUvRSxNQUFhLGFBQWMsU0FBUSwrQkFBYztJQVU3QyxZQUFZLE1BQWM7UUFDdEIsS0FBSyxDQUFDLE1BQU0sRUFBRSxPQUFPLENBQUMsQ0FBQztRQVlwQixVQUFLLEdBQW1CLENBQU8sR0FBRyxFQUFFLEVBQUU7WUFFekMsSUFBSSxRQUFRLEdBQWtCLEdBQW9CLENBQUM7WUFDbkQsSUFBSSxRQUFRLEdBQVcsR0FBRyxDQUFDLGdCQUFnQixDQUFDLFVBQVUsQ0FBQyxDQUFDO1lBRXhELElBQUksY0FBYyxHQUFHLElBQUksQ0FBQyxtQkFBbUIsQ0FBQyxtQkFBbUIsQ0FBQyxRQUFRLENBQUMsQ0FBQztZQUU1RSxzQkFBc0I7WUFDdEIsSUFBSSxHQUFHLENBQUMsUUFBUSxDQUFDLFVBQVUsQ0FBQyxFQUFFO2dCQUMxQixJQUFJLFFBQVEsR0FBRyxHQUFHLENBQUMsZ0JBQWdCLENBQUMsVUFBVSxDQUFDLENBQUM7Z0JBQ2hELE9BQU8sUUFBUTtxQkFDVixpQkFBaUIsQ0FBQyxRQUFRLEVBQUUsUUFBUSxFQUFFLFFBQVEsQ0FBQztxQkFDL0MsSUFBSSxDQUNELENBQUMsSUFBZ0IsRUFBRSxFQUFFO29CQUNqQixvQkFBb0I7b0JBQ3BCLGNBQWMsQ0FBQyxPQUFPLEdBQUcsSUFBSSxDQUFDO29CQUM5QixJQUFJLFFBQVEsR0FBRyxJQUFJLENBQUMsbUJBQW1CLENBQUMsa0JBQWtCLENBQUMsUUFBUSxDQUFDLENBQUM7b0JBRXJFLE9BQU87d0JBQ0gsT0FBTyxFQUFFLG1CQUFtQjt3QkFDNUIsUUFBUSxFQUFFLFFBQVE7d0JBQ2xCLFFBQVEsRUFBRSxJQUFJLENBQUMsV0FBVyxFQUFFO3dCQUM1QixNQUFNLEVBQUUsR0FBRyxDQUFDLGVBQWUsRUFBRSxDQUFDLE1BQU0sRUFBRTtxQkFDekMsQ0FBQztnQkFDTixDQUFDLENBQ0osQ0FBQyxLQUFLLENBQUMsQ0FBQyxHQUFHLEVBQUUsRUFBRTtvQkFDWixNQUFNLEdBQUcsQ0FBQztnQkFDZCxDQUFDLENBQUMsQ0FBQzthQUNWO2lCQUNJO2dCQUNELE1BQU0sSUFBSSx5QkFBVyxDQUFDLGlDQUFpQyxDQUFDLENBQUM7YUFDNUQ7UUFDTCxDQUFDLENBQUEsQ0FBQztRQUVLLFdBQU0sR0FBbUIsQ0FBQyxHQUFHLEVBQUUsRUFBRTtZQUVwQyxJQUFJLFFBQVEsR0FBa0IsR0FBb0IsQ0FBQztZQUVuRCxJQUFJLFFBQVEsR0FBRyxHQUFHLENBQUMsZ0JBQWdCLENBQUMsVUFBVSxDQUFDLENBQUM7WUFDaEQsSUFBSSxNQUFNLEdBQUcsR0FBRyxDQUFDLFNBQVMsQ0FBQyxtQkFBbUIsQ0FBQyxDQUFDO1lBQ2hELHNEQUFzRDtZQUV0RCxJQUFJLFFBQVEsSUFBSSxNQUFNLEVBQUU7Z0JBRXBCLFFBQVEsQ0FBQyxTQUFTLENBQUMsbUJBQW1CLEVBQUUsRUFBRSxFQUFFO29CQUN4QyxPQUFPLEVBQUUsSUFBSSxJQUFJLEVBQUU7b0JBQ25CLFFBQVEsRUFBRSxJQUFJO2lCQUNqQixDQUFDLENBQUM7Z0JBRUgsUUFBUSxDQUFDLFNBQVMsQ0FBQyxvQkFBb0IsRUFBRSxFQUFFLEVBQUU7b0JBQ3pDLE9BQU8sRUFBRSxJQUFJLElBQUksRUFBRTtvQkFDbkIsUUFBUSxFQUFFLElBQUk7aUJBQ2pCLENBQUMsQ0FBQztnQkFFSCxJQUFJLENBQUMsTUFBTSxDQUFDLFNBQVMsRUFBRSxDQUFDLFVBQVUsQ0FBQyxRQUFRLENBQUMsQ0FBQztnQkFFN0MsT0FBTyxFQUFFLFFBQVEsRUFBRSxJQUFJLEVBQUUsQ0FBQzthQUM3QjtpQkFBTTtnQkFDSCxNQUFNLElBQUksMkJBQVksQ0FBQywrQ0FBK0MsQ0FBQyxDQUFDO2FBQzNFO1FBRUwsQ0FBQyxDQUFDO1FBdkVFLElBQUksQ0FBQyxtQkFBbUIsR0FBRyxJQUFJLHlDQUFtQixFQUFFLENBQUM7SUFDekQsQ0FBQztJQUVNLHlCQUF5QjtRQUM1QixPQUFPO1lBQ0gsT0FBTyxFQUFFLDJDQUFtQjtZQUM1QixRQUFRLEVBQUUsNkNBQW9CO1NBQ2pDLENBQUM7SUFDTixDQUFDOztBQXJCTCxzQ0FzRkM7QUFwRkc7OztHQUdHO0FBQ0ksZ0RBQWtDLEdBQUcsSUFBSSxDQUFDIn0=
+    LoginListener.COOKIE_USER_NAME = "UA_USERNAME";
+    LoginListener.COOKIE_SESSION_TOKEN = "UA_SESSION_TOKEN";
+    LoginListener.COOKIE_ACCESS_TOKEN = "UA_ACCESS_TOKEN";
+    /**
+     * Amount of time required to complete
+     * the login request
+     */
+    LoginListener.LOGIN_LISTENER_DELAY_LOGIN_ATTEMPT = 1000;
+    return LoginListener;
+})();
+export { LoginListener };

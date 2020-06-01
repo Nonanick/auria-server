@@ -1,6 +1,6 @@
 import { Express } from 'express-serve-static-core';
-import { System } from './kernel/System';
-import { AuriaServerBootInfo } from './server/AuriaServerBootInfo';
+import { System } from './kernel/System.js';
+import { AuriaServerBootInfo } from './server/AuriaServerBootInfo.js';
 export declare type AuriaServerStatus = "online" | "offline" | "maintenance";
 export declare const Auria_ENV: "development" | "production ";
 export declare class AuriaServer {
@@ -63,4 +63,3 @@ export declare class AuriaServer {
     addSystem(...system: System[]): AuriaServer;
     run(): AuriaServer;
 }
-export declare const AURIA_LOG_ROOT: string;

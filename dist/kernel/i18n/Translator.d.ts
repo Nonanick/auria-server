@@ -1,4 +1,4 @@
-import { System } from "../System";
+import { System } from "../System.js";
 export declare class Translator {
     static objectToTranslations(obj: any): {
         [key: string]: string;

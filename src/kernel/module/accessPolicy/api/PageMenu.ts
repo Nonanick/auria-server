@@ -1,7 +1,7 @@
-import { Page } from './Page';
-import { ModuleResource } from './ModuleResource';
-import { ApiDependency } from './dependencies/ApiDependency';
-import { DataDependency } from './dependencies/DataDependency';
+import { Page } from './Page.js';
+import { ModuleResource } from './ModuleResource.js';
+import { ApiDependency } from './dependencies/ApiDependency.js';
+import { DataDependency } from './dependencies/DataDependency.js';
 
 export abstract class PageMenu extends ModuleResource {
 

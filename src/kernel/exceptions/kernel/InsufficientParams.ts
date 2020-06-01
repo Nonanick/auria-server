@@ -1,8 +1,9 @@
-import { AuriaException } from "../AuriaException";
+import { AuriaException } from "../AuriaException.js";
+
 
 export class InsufficientParams extends AuriaException {
 
-    public static InsufficientParamsCode: string = "AE_INS_PARAM";
+    public static InsufficientParamsCode: string = "SYS.KERNEL.INSUFFICIENT_PARAMS";
 
     constructor(message: string, requiredParams: string[]) {
         super(message, requiredParams);

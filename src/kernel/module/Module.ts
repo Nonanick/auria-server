@@ -1,12 +1,23 @@
-import { System } from "../System";
-import { ModuleListener } from "./ModuleListener";
-import { SystemUser } from "../security/SystemUser";
-import { ModuleRequest } from "../http/request/ModuleRequest";
-import { ListenerUnavaliable } from "../exceptions/kernel/ListenerUnavaliable";
-import { ListenerRequest, ListenerRequestFactory } from "../http/request/ListenerRequest";
+import { EventEmitter } from 'events';
 import { Response } from "express-serve-static-core";
+import { ModuleInterface } from './interface/ModuleInterface.js';
+import { ModulePageDataRequirements, ModulePageActionRequirements } from './interface/requirements/ModulePageRequirements.js';
+import { ModulePage } from './interface/ModulePage.js';
+import { ModuleListener } from './api/ModuleListener.js';
+import { System } from '../System.js';
+import { SystemUser } from '../security/user/SystemUser.js';
+import { ModuleRequest } from '../http/request/ModuleRequest.js';
+import { ListenerUnavaliable } from '../exceptions/kernel/ListenerUnavaliable.js';
+import { ListenerRequest, ListenerRequestFactory } from '../http/request/ListenerRequest.js';
 
-export abstract class Module {
+export abstract class Module extends EventEmitter {
+
+    protected _name: string;
+    protected _title: string;
+    protected _description: string;
+    protected _color : string;
+    protected _icon : string;
+
 
     /**
      * Name
@@ -14,7 +25,14 @@ export abstract class Module {
      * 
      * Unique identifier of this module
      */
-    public name: string;
+    public get name(): string {
+        return this._name;
+    }
+
+    public set name(name: string) {
+        this.emit(ModuleEvents.NAME_CHANGED, name);
+        this._name = name;
+    }
 
     /**
      * Title
@@ -25,7 +43,14 @@ export abstract class Module {
      * 
      * @example 'Auria @{Module.Name.Title}'
      */
-    public title: string;
+    public get title(): string {
+        return this._title;
+    }
+
+    public set title(title: string) {
+        this.emit(ModuleEvents.TITLE_CHANGED, title);
+        this._title = title;
+    }
 
     /**
      * Description
@@ -36,7 +61,14 @@ export abstract class Module {
      * 
      * @example 'Auria @{Module.Name.Description}
      */
-    public description: string;
+    public get description(): string {
+        return this._description;
+    }
+
+    public set description(description: string) {
+        this.emit(ModuleEvents.DESCRIPTION_CHANGED, description);
+        this._description = description;
+    }
 
     /**
      * Color
@@ -47,7 +79,14 @@ export abstract class Module {
      * 
      * @example '#098A41'
      */
-    public color: string;
+    public get color(): string {
+        return this._color;
+    }
+
+    public set color(color: string) {
+        this.emit(ModuleEvents.COLOR_CHANGED, color);
+        this._color = color;
+    }
 
     /**
      * Icon
@@ -55,7 +94,16 @@ export abstract class Module {
      * 
      * Path to an icon in the front server
      */
-    public icon: string;
+    public get icon(): string {
+        return this._icon;
+    }
+
+    public set icon(icon: string) {
+        this.emit(ModuleEvents.ICON_CHANGED, icon);
+        this._icon = icon;
+    }
+
+    protected interface: ModuleInterface;
 
     /**
      * System
@@ -66,19 +114,22 @@ export abstract class Module {
     protected system: System;
 
     /**
-     * Listener
+     * Module Listener
      * --------
      * 
      * All the listeners assigned to this module
      */
-    protected listeners: Map<string, ModuleListener>;
+    protected moduleListeners: Map<string, ModuleListener>;
 
 
     constructor(system: System, name: string) {
+        super();
+
         this.system = system;
         this.name = name;
 
-        this.listeners = new Map();
+        this.interface = new ModuleInterface(this);
+        this.moduleListeners = new Map();
     }
 
     /**
@@ -88,7 +139,7 @@ export abstract class Module {
      * @param listenerName 
      */
     public hasListener(listenerName: string) {
-        return this.listeners.has(listenerName);
+        return this.moduleListeners.has(listenerName);
     }
 
     /**
@@ -98,22 +149,25 @@ export abstract class Module {
      * @param listenerName 
      */
     public getListener(listenerName: string) {
-        return this.listeners.get(listenerName);
+        return this.moduleListeners.get(listenerName);
     }
 
     public getAllListeners(): ModuleListener[] {
-        return Array.from(this.listeners.values());
+        return Array.from(this.moduleListeners.values());
     }
 
+    public getInterface(): ModuleInterface {
+        return this.interface;
+    }
     /**
      * Add Multiple Listeners to this Module
      * --------------------------------------
      * 
      * @param listeners 
      */
-    public addListener(...listeners: ModuleListener[]) {
+    public addModuleListener(...listeners: ModuleListener[]) {
         listeners.forEach((listener) => {
-            this.listeners.set(listener.name, listener);
+            this.moduleListeners.set(listener.name, listener);
         });
     }
 
@@ -128,7 +182,8 @@ export abstract class Module {
      * Module: Data Permission
      * ---------------------------
      * 
-     * Inform what data permissions this module
+     * Inform what data permissions this module API
+     * needs
      * 
      */
     public getModuleDataPermissions() {
@@ -136,8 +191,8 @@ export abstract class Module {
             [tableName: string]: string[]
         } = {};
 
-        this.listeners.forEach((listener) => {
-            let actionDefinition = listener.getExposedActionsMetadata();
+        this.moduleListeners.forEach((listener) => {
+            let actionDefinition = listener.getMetadataFromExposedActions();
 
             for (var actionName in actionDefinition) {
                 if (actionDefinition.hasOwnProperty(actionName)) {
@@ -145,7 +200,7 @@ export abstract class Module {
 
                     if (actionReq.dataDependencies != null) {
                         let tables = actionReq.dataDependencies;
-                        
+
                         for (var tableName in tables) {
                             if (tables.hasOwnProperty(tableName)) {
                                 let act = tables[tableName].actions;
@@ -162,6 +217,107 @@ export abstract class Module {
 
     public getTable(user: SystemUser, table: string) {
         throw new Error("Not immplemented yet!");
+    }
+
+    /**
+     * Get Data Requirements
+     * ---------------------
+     * 
+     * Get necessary *Data Resources* needed to run the Module!
+     * 
+     * 
+     */
+    public getDataRequirements(): ModulePageDataRequirements {
+        let requirements: ModulePageDataRequirements = {};
+
+        this.interface.getAllPages().forEach((page: ModulePage) => {
+            let pageRequirements = page.getRequirements();
+
+            if (pageRequirements.data == null) return;
+
+            requirements = this.mergeModulePageDataRequirement(requirements, pageRequirements.data);
+        });
+
+        return requirements;
+    }
+
+    /**
+     * Get API Requirements
+     * ---------------------
+     * 
+     * Get necessary *Listener Actions* needed to run the Module!
+     * 
+     */
+    public getApiRequirements(): ModulePageActionRequirements {
+        let requirements: ModulePageActionRequirements = {};
+
+        this.interface.getAllPages().forEach((page: ModulePage) => {
+            let pageRequirements = page.getRequirements();
+            if (pageRequirements.actions == null) return;
+
+            requirements = this.mergeModulePageApiRequirement(requirements, pageRequirements.actions);
+
+        });
+
+        return requirements;
+    }
+
+    public mergeModulePageApiRequirement(req1: ModulePageActionRequirements, req2: ModulePageActionRequirements): ModulePageActionRequirements {
+        let merged = Object.assign(req2);
+
+        //# - Traverse in page listener requirements
+        for (var listenerName in req1) {
+            if (req1.hasOwnProperty(listenerName)) {
+
+                // Check each listener action it needs
+                let apiActions = req1[listenerName];
+
+                // Push it whole if it previously did not exist
+                if (merged[listenerName] == null) {
+                    merged[listenerName] = apiActions;
+                }
+                // Merge uniquie values if it previously existed!
+                else {
+                    apiActions.forEach((action) => {
+                        if (merged[listenerName].indexOf(action) < 0) {
+                            merged[listenerName].push(action);
+                        }
+                    });
+                }
+            }
+        }
+
+        return merged;
+
+    }
+
+    public mergeModulePageDataRequirement(req1: ModulePageDataRequirements, req2: ModulePageDataRequirements): ModulePageDataRequirements {
+        let merged = Object.assign(req2);
+
+        //# - Traverse in page listener requirements
+        for (var listenerName in req1) {
+            if (req1.hasOwnProperty(listenerName)) {
+
+                // Check each listener action it needs
+                let apiActions = req1[listenerName];
+
+                // Push it whole if it previously did not exist
+                if (merged[listenerName] == null) {
+                    merged[listenerName] = apiActions;
+                }
+                // Merge uniquie values if it previously existed!
+                else {
+                    apiActions.forEach((action) => {
+                        if (merged[listenerName].indexOf(action) < 0) {
+                            merged[listenerName].push(action);
+                        }
+                    });
+                }
+            }
+        }
+
+        return merged;
+
     }
 
     protected abstract loadTranslations(): TranslationsByLang;
@@ -186,10 +342,10 @@ export abstract class Module {
         let requestListener: string = request.getRequestStack().listener();
 
         let listener: ModuleListener;
-        if (!this.listeners.has(requestListener) && !this.listeners.has(requestListener + "Listener")) {
+        if (!this.moduleListeners.has(requestListener) && !this.moduleListeners.has(requestListener + "Listener")) {
             throw new ListenerUnavaliable("Requested Listener '" + requestListener + "' does not exist in this module!");
         } else {
-            listener = this.listeners.get(requestListener)! || this.listeners.get(requestListener + "Listener")!;
+            listener = this.moduleListeners.get(requestListener)! || this.moduleListeners.get(requestListener + "Listener")!;
         }
 
         let listenerRequest: ListenerRequest = ListenerRequestFactory.make(request, listener);
@@ -205,3 +361,11 @@ export type TranslationsByLang = {
         [key: string]: string;
     };
 };
+
+export enum ModuleEvents {
+    NAME_CHANGED = "nameChanged",
+    TITLE_CHANGED = "titleChanged",
+    DESCRIPTION_CHANGED = "descriptionChanged",
+    ICON_CHANGED = "iconChanged",
+    COLOR_CHANGED = "colorChanged"
+}

@@ -1,6 +1,6 @@
-import { SystemRequest } from "./SystemRequest";
-import { SystemUser } from "../../security/SystemUser";
-import { Module } from "../../module/Module";
+import { SystemRequest } from "./SystemRequest.js";
+import { SystemUser } from "../../security/user/SystemUser.js";
+import { Module } from "../../module/Module.js";
 export interface ModuleRequest extends SystemRequest {
     getUser: () => SystemUser;
 }

@@ -1,6 +1,7 @@
-import { Module, TranslationsByLang } from "../Module";
-import { System } from "../../System";
-import { ModuleRowData } from "../ModuleRowData";
+import { Module, TranslationsByLang } from "../Module.js";
+import { ModuleRowData } from "../ModuleRowData.js";
+import { ModuleInterface, ModuleInterfaceDescription } from "../interface/ModuleInterface.js";
+import { System } from "../../System.js";
 export declare class DatabaseModule extends Module {
     /**
      * Populate a Module with information coming from the database
@@ -16,9 +17,15 @@ export declare class DatabaseModule extends Module {
      *
      */
     protected rowInfo: ModuleRowData;
+    protected id: number;
+    protected interface: ModuleInterface;
+    protected loadInterfacePromise: Promise<ModuleInterfaceDescription>;
     constructor(system: System, name: string);
+    protected loadInterface(): Promise<ModuleInterfaceDescription>;
+    private loadInterfaceRootMenus;
+    private loadInterfaceRootPages;
     protected fetchGlobalListeners(): void;
-    setRowInfo(info: ModuleRowData): DatabaseModule;
+    initializeWithDbInfo(info: ModuleRowData): DatabaseModule;
     /**
      * Return table row data that was used to create this database module
      * might be null if this database was not initialized via a table row

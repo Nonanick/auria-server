@@ -1,4 +1,5 @@
-import { SystemUser } from "../../../security/SystemUser";
+import { SystemUser } from "../../../security/user/SystemUser.js";
+
 
 export class DataPermission {
 

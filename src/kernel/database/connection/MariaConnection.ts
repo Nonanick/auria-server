@@ -1,5 +1,6 @@
 import { MysqlConnection } from "./MysqlConnection";
 
+
 export class MariaConnection extends MysqlConnection {
 
     constructor(host: string, port : number, user : string, dbName : string) {

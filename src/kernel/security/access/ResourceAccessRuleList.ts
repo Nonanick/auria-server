@@ -1,4 +1,5 @@
-import { AccessRule, AccessRuleContext } from "./AccessRule";
+import { AccessRule, AccessRuleContext } from "./AccessRule.js";
+
 
 export type ResourceIdentification = {
     module: string;
@@ -15,7 +16,6 @@ export class ResourceAccessRuleList {
     constructor(resource: ResourceIdentification) {
         this.resource = resource;
         this.rules = new Map();
-        console.log(this.rules);
     }
 
     public getResourceNameAsString(): string {
@@ -50,6 +50,12 @@ export class ResourceAccessRuleList {
 
     public async applyRulesOnContext(context: AccessRuleContext): Promise<boolean> {
         let allPromises: Promise<boolean>[] = [];
+
+        //# - No access rules? go on!
+        if(this.rules.size == 0) {
+            console.log("[ResourceAccessRuleList] Empty Access Rule List! Authorizing access!");
+            return true;
+        }
 
         this.rules.forEach((rule) => {
             let ans = rule.applyRuleOnContext(context)

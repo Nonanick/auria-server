@@ -1,10 +1,13 @@
-import { SystemUser } from "../SystemUser";
-import { RequestStack } from "../../RequestStack";
-import { AccessRuleCondition } from "./ResourceAccessRule";
+import { AccessRuleCondition } from "./ResourceAccessRule.js";
+import { SystemUser } from "../user/SystemUser.js";
+import { RequestStack } from "../../RequestStack.js";
+import { System } from "../../System.js";
 
 export interface AccessRuleContext {
+    system : System;
     requestStack : RequestStack;
     user : SystemUser;
+    params : any;
 }
 
 export class AccessRule {

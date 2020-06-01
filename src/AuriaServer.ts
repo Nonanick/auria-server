@@ -1,13 +1,17 @@
 import { Express, Request, Response, NextFunction } from 'express-serve-static-core';
-import { System } from './kernel/System';
-import { SystemRequest } from './kernel/http/request/SystemRequest';
-import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable';
-import { RequestStack } from './kernel/RequestStack';
-import { ServerRequest, ServerRequestFactory } from './kernel/http/request/ServerRequest';
-import { AuriaException } from './kernel/exceptions/AuriaException';
-import { AuriaServerBootInfo } from './server/AuriaServerBootInfo';
-import { AuriaSystem } from './default/AuriaSystem';
+import { System } from './kernel/System.js';
+import { AuriaServerBootInfo } from './server/AuriaServerBootInfo.js';
+import { ServerRequest, ServerRequestFactory } from './kernel/http/request/ServerRequest.js';
 import { ServerResponse } from 'aurialib2';
+import { AuriaSystem } from './default/AuriaSystem.js';
+import { RequestStack } from './kernel/RequestStack.js';
+import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable.js';
+import { SystemRequest } from './kernel/http/request/SystemRequest.js';
+import { AuriaException } from './kernel/exceptions/AuriaException.js';
+
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+
 
 export type AuriaServerStatus = "online" | "offline" | "maintenance";
 
@@ -79,23 +83,28 @@ export class AuriaServer {
                 // # ELSE, system exists in server
                 let system = this.systems.get(stack.system())!;
                 let systemRequest: SystemRequest = system.promoteToSystemRequest(serverReq, stack);
-                
+
                 // Sending the data through the Response object is a 'System' Responsability!
                 let systemResponse = await system.handleRequest(systemRequest, res, next);
 
                 console.log("System Response to request: ", systemResponse);
             }
             catch (ex) {
-                let exc = ex as AuriaException;
-                this.handleRequestException(exc, res);
+                if (ex instanceof AuriaException) {
+                    let exc = ex as AuriaException;
+                    this.handleRequestException(exc, res);
+                } else {
+                    let nExc = new class extends AuriaException { getCode() { return "SYS.SERVER.UNKNOWN_EXCEPTION"; } }(ex);
+                    this.handleRequestException(nExc, res);
+                }
             }
         };
 
     private answerServerStatus(response: Response) {
-        
+
         let status: ServerResponse = {
             digest: "ok",
-            error :"",
+            error: "",
             exitCode: "SERVER.STATUS",
             response: {
                 server_status: this.serverStatus
@@ -141,7 +150,9 @@ export class AuriaServer {
 
         this.addSystem(
             //new AuriaCoreSystem(),
-            new AuriaSystem("test")
+            new AuriaSystem("test"),
+            new AuriaSystem("Paper"),
+            new AuriaSystem("Architect")
         );
 
     }
@@ -157,8 +168,6 @@ export class AuriaServer {
      */
     private initializeExpressApp() {
 
-        var bodyParser = require('body-parser');
-        var cookieParser = require('cookie-parser');
 
         this.app.use(bodyParser.urlencoded({ extended: true }));
         this.app.use(bodyParser.json());
@@ -190,5 +199,3 @@ export class AuriaServer {
         return this;
     }
 }
-
-export const AURIA_LOG_ROOT = __dirname + "/logs";

@@ -1,5 +1,6 @@
-import { AuriaConnection } from "./AuriaConnection";
+
 import { Connection, Pool, createConnection, createPool, queryCallback } from "mysql";
+import { AuriaConnection } from "./AuriaConnection.js";
 
 export class MysqlConnection extends AuriaConnection {
 

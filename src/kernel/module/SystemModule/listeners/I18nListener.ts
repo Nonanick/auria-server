@@ -1,17 +1,15 @@
-import { ModuleListener } from "../../ModuleListener";
-import { Module } from "../../Module";
-import { ListenerAction } from "../../ListenerAction";
-import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata";
+import { Module } from "../../Module.js";import { AuriaListenerActionMetadata } from "../../../../default/module/listener/AuriaListenerActionMetadata.js";
+import { ModuleListener } from "../../api/ModuleListener.js";
+import { ListenerAction } from "../../api/ListenerAction.js";
 
 export class I18nListener extends ModuleListener {
-
 
 
     constructor(module: Module) {
         super(module, "I18n");
     }
 
-    public getExposedActionsMetadata(): AuriaListenerActionMetadata {
+    public getMetadataFromExposedActions(): AuriaListenerActionMetadata {
         return {
             "getTranslations": {
                 DISABLE_WHITELIST_RULE: true,

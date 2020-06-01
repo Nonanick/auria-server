@@ -1,6 +1,7 @@
-import { AuriaResponse } from "./AuriaResponse";
+
 import { EventEmitter } from "events";
-import { SystemUser } from "../security/SystemUser";
+import { AuriaResponse } from "./AuriaResponse.js";
+import { SystemUser } from "../security/user/SystemUser.js";
 
 export class AuriaEventResponse extends EventEmitter {
 

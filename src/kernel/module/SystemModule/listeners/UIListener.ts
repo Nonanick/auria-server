@@ -1,8 +1,7 @@
-import { ModuleListener } from "../../ModuleListener";
-import { AuriaResponse } from "../../../http/AuriaResponse";
-import { Module } from "../../Module";
-import { ListenerRequest } from "../../../http/request/ListenerRequest";
-import { ListenerActionsMetadata } from "../../ListenerAction";
+import { Module } from "../../Module.js";import { ListenerActionsMetadata } from "../../api/ListenerAction.js";
+import { ModuleListener } from "../../api/ModuleListener.js";
+import { ListenerRequest } from "../../../http/request/ListenerRequest.js";
+import { AuriaResponse } from "../../../http/AuriaResponse.js";
 
 export class UIListener extends ModuleListener {
     
@@ -10,7 +9,7 @@ export class UIListener extends ModuleListener {
         super(module, "UIListener");
     }
 
-    public getExposedActionsMetadata(): ListenerActionsMetadata {
+    public getMetadataFromExposedActions(): ListenerActionsMetadata {
         return { 
             "menuTree" : {},
             "getModulesTree" : {}

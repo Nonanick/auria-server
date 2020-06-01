@@ -5,6 +5,7 @@ export abstract class AuriaException {
     protected code: string;
 
     protected httpCode: number = 400;
+    
     constructor(message: string, ...args: any[]) {
         this.message = message;
         this.errArgs = args;

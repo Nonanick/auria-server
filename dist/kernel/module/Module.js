@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,14 +7,91 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const ListenerUnavaliable_1 = require("../exceptions/kernel/ListenerUnavaliable");
-const ListenerRequest_1 = require("../http/request/ListenerRequest");
-class Module {
+import { EventEmitter } from 'events';
+import { ModuleInterface } from './interface/ModuleInterface.js';
+import { ListenerUnavaliable } from '../exceptions/kernel/ListenerUnavaliable.js';
+import { ListenerRequestFactory } from '../http/request/ListenerRequest.js';
+export class Module extends EventEmitter {
     constructor(system, name) {
+        super();
         this.system = system;
         this.name = name;
-        this.listeners = new Map();
+        this.interface = new ModuleInterface(this);
+        this.moduleListeners = new Map();
+    }
+    /**
+     * Name
+     * -----
+     *
+     * Unique identifier of this module
+     */
+    get name() {
+        return this._name;
+    }
+    set name(name) {
+        this.emit(ModuleEvents.NAME_CHANGED, name);
+        this._name = name;
+    }
+    /**
+     * Title
+     * ------
+     *
+     * Text repreenting the readable name of the title, might be used
+     * as an i18n text
+     *
+     * @example 'Auria @{Module.Name.Title}'
+     */
+    get title() {
+        return this._title;
+    }
+    set title(title) {
+        this.emit(ModuleEvents.TITLE_CHANGED, title);
+        this._title = title;
+    }
+    /**
+     * Description
+     * -----------
+     *
+     * A little text that explains the general purpose of this module,
+     * might be used as an i18n text
+     *
+     * @example 'Auria @{Module.Name.Description}
+     */
+    get description() {
+        return this._description;
+    }
+    set description(description) {
+        this.emit(ModuleEvents.DESCRIPTION_CHANGED, description);
+        this._description = description;
+    }
+    /**
+     * Color
+     * ------
+     *
+     * Accent color of the module, used as a visual representative
+     * The color should be an string representing the RGB color as an HEX string
+     *
+     * @example '#098A41'
+     */
+    get color() {
+        return this._color;
+    }
+    set color(color) {
+        this.emit(ModuleEvents.COLOR_CHANGED, color);
+        this._color = color;
+    }
+    /**
+     * Icon
+     * -----
+     *
+     * Path to an icon in the front server
+     */
+    get icon() {
+        return this._icon;
+    }
+    set icon(icon) {
+        this.emit(ModuleEvents.ICON_CHANGED, icon);
+        this._icon = icon;
     }
     /**
      * Has Listener
@@ -24,7 +100,7 @@ class Module {
      * @param listenerName
      */
     hasListener(listenerName) {
-        return this.listeners.has(listenerName);
+        return this.moduleListeners.has(listenerName);
     }
     /**
      * Get Listener
@@ -33,10 +109,13 @@ class Module {
      * @param listenerName
      */
     getListener(listenerName) {
-        return this.listeners.get(listenerName);
+        return this.moduleListeners.get(listenerName);
     }
     getAllListeners() {
-        return Array.from(this.listeners.values());
+        return Array.from(this.moduleListeners.values());
+    }
+    getInterface() {
+        return this.interface;
     }
     /**
      * Add Multiple Listeners to this Module
@@ -44,9 +123,9 @@ class Module {
      *
      * @param listeners
      */
-    addListener(...listeners) {
+    addModuleListener(...listeners) {
         listeners.forEach((listener) => {
-            this.listeners.set(listener.name, listener);
+            this.moduleListeners.set(listener.name, listener);
         });
     }
     /**
@@ -59,13 +138,14 @@ class Module {
      * Module: Data Permission
      * ---------------------------
      *
-     * Inform what data permissions this module
+     * Inform what data permissions this module API
+     * needs
      *
      */
     getModuleDataPermissions() {
         let tablePermissions = {};
-        this.listeners.forEach((listener) => {
-            let actionDefinition = listener.getExposedActionsMetadata();
+        this.moduleListeners.forEach((listener) => {
+            let actionDefinition = listener.getMetadataFromExposedActions();
             for (var actionName in actionDefinition) {
                 if (actionDefinition.hasOwnProperty(actionName)) {
                     let actionReq = actionDefinition[actionName];
@@ -86,6 +166,87 @@ class Module {
     getTable(user, table) {
         throw new Error("Not immplemented yet!");
     }
+    /**
+     * Get Data Requirements
+     * ---------------------
+     *
+     * Get necessary *Data Resources* needed to run the Module!
+     *
+     *
+     */
+    getDataRequirements() {
+        let requirements = {};
+        this.interface.getAllPages().forEach((page) => {
+            let pageRequirements = page.getRequirements();
+            if (pageRequirements.data == null)
+                return;
+            requirements = this.mergeModulePageDataRequirement(requirements, pageRequirements.data);
+        });
+        return requirements;
+    }
+    /**
+     * Get API Requirements
+     * ---------------------
+     *
+     * Get necessary *Listener Actions* needed to run the Module!
+     *
+     */
+    getApiRequirements() {
+        let requirements = {};
+        this.interface.getAllPages().forEach((page) => {
+            let pageRequirements = page.getRequirements();
+            if (pageRequirements.actions == null)
+                return;
+            requirements = this.mergeModulePageApiRequirement(requirements, pageRequirements.actions);
+        });
+        return requirements;
+    }
+    mergeModulePageApiRequirement(req1, req2) {
+        let merged = Object.assign(req2);
+        //# - Traverse in page listener requirements
+        for (var listenerName in req1) {
+            if (req1.hasOwnProperty(listenerName)) {
+                // Check each listener action it needs
+                let apiActions = req1[listenerName];
+                // Push it whole if it previously did not exist
+                if (merged[listenerName] == null) {
+                    merged[listenerName] = apiActions;
+                }
+                // Merge uniquie values if it previously existed!
+                else {
+                    apiActions.forEach((action) => {
+                        if (merged[listenerName].indexOf(action) < 0) {
+                            merged[listenerName].push(action);
+                        }
+                    });
+                }
+            }
+        }
+        return merged;
+    }
+    mergeModulePageDataRequirement(req1, req2) {
+        let merged = Object.assign(req2);
+        //# - Traverse in page listener requirements
+        for (var listenerName in req1) {
+            if (req1.hasOwnProperty(listenerName)) {
+                // Check each listener action it needs
+                let apiActions = req1[listenerName];
+                // Push it whole if it previously did not exist
+                if (merged[listenerName] == null) {
+                    merged[listenerName] = apiActions;
+                }
+                // Merge uniquie values if it previously existed!
+                else {
+                    apiActions.forEach((action) => {
+                        if (merged[listenerName].indexOf(action) < 0) {
+                            merged[listenerName].push(action);
+                        }
+                    });
+                }
+            }
+        }
+        return merged;
+    }
     getTranslations() {
         let translations = this.loadTranslations();
         for (var lang in translations) {
@@ -104,16 +265,22 @@ class Module {
         return __awaiter(this, void 0, void 0, function* () {
             let requestListener = request.getRequestStack().listener();
             let listener;
-            if (!this.listeners.has(requestListener) && !this.listeners.has(requestListener + "Listener")) {
-                throw new ListenerUnavaliable_1.ListenerUnavaliable("Requested Listener '" + requestListener + "' does not exist in this module!");
+            if (!this.moduleListeners.has(requestListener) && !this.moduleListeners.has(requestListener + "Listener")) {
+                throw new ListenerUnavaliable("Requested Listener '" + requestListener + "' does not exist in this module!");
             }
             else {
-                listener = this.listeners.get(requestListener) || this.listeners.get(requestListener + "Listener");
+                listener = this.moduleListeners.get(requestListener) || this.moduleListeners.get(requestListener + "Listener");
             }
-            let listenerRequest = ListenerRequest_1.ListenerRequestFactory.make(request, listener);
+            let listenerRequest = ListenerRequestFactory.make(request, listener);
             return listener.handleRequest(listenerRequest);
         });
     }
 }
-exports.Module = Module;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTW9kdWxlLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL2tlcm5lbC9tb2R1bGUvTW9kdWxlLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7O0FBSUEsa0ZBQStFO0FBQy9FLHFFQUEwRjtBQUcxRixNQUFzQixNQUFNO0lBb0V4QixZQUFZLE1BQWMsRUFBRSxJQUFZO1FBQ3BDLElBQUksQ0FBQyxNQUFNLEdBQUcsTUFBTSxDQUFDO1FBQ3JCLElBQUksQ0FBQyxJQUFJLEdBQUcsSUFBSSxDQUFDO1FBRWpCLElBQUksQ0FBQyxTQUFTLEdBQUcsSUFBSSxHQUFHLEVBQUUsQ0FBQztJQUMvQixDQUFDO0lBRUQ7Ozs7O09BS0c7SUFDSSxXQUFXLENBQUMsWUFBb0I7UUFDbkMsT0FBTyxJQUFJLENBQUMsU0FBUyxDQUFDLEdBQUcsQ0FBQyxZQUFZLENBQUMsQ0FBQztJQUM1QyxDQUFDO0lBRUQ7Ozs7O09BS0c7SUFDSSxXQUFXLENBQUMsWUFBb0I7UUFDbkMsT0FBTyxJQUFJLENBQUMsU0FBUyxDQUFDLEdBQUcsQ0FBQyxZQUFZLENBQUMsQ0FBQztJQUM1QyxDQUFDO0lBRU0sZUFBZTtRQUNsQixPQUFPLEtBQUssQ0FBQyxJQUFJLENBQUMsSUFBSSxDQUFDLFNBQVMsQ0FBQyxNQUFNLEVBQUUsQ0FBQyxDQUFDO0lBQy9DLENBQUM7SUFFRDs7Ozs7T0FLRztJQUNJLFdBQVcsQ0FBQyxHQUFHLFNBQTJCO1FBQzdDLFNBQVMsQ0FBQyxPQUFPLENBQUMsQ0FBQyxRQUFRLEVBQUUsRUFBRTtZQUMzQixJQUFJLENBQUMsU0FBUyxDQUFDLEdBQUcsQ0FBQyxRQUFRLENBQUMsSUFBSSxFQUFFLFFBQVEsQ0FBQyxDQUFDO1FBQ2hELENBQUMsQ0FBQyxDQUFDO0lBQ1AsQ0FBQztJQUVEOztPQUVHO0lBQ0ksU0FBUztRQUNaLE9BQU8sSUFBSSxDQUFDLE1BQU0sQ0FBQztJQUN2QixDQUFDO0lBRUQ7Ozs7OztPQU1HO0lBQ0ksd0JB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
+export var ModuleEvents;
+(function (ModuleEvents) {
+    ModuleEvents["NAME_CHANGED"] = "nameChanged";
+    ModuleEvents["TITLE_CHANGED"] = "titleChanged";
+    ModuleEvents["DESCRIPTION_CHANGED"] = "descriptionChanged";
+    ModuleEvents["ICON_CHANGED"] = "iconChanged";
+    ModuleEvents["COLOR_CHANGED"] = "colorChanged";
+})(ModuleEvents || (ModuleEvents = {}));

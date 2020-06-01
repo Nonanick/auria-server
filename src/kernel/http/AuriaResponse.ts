@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express-serve-static-core';
-import { AuriaException } from '../exceptions/AuriaException';
+import { AuriaException } from "../exceptions/AuriaException.js";
 
 export type RequestDigestStatus = "ok" | "error" | "failed" | "unauthorized";
 

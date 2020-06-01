@@ -1,5 +1,7 @@
-import { AuriaActionMetadata } from "../../../../../../default/module/listener/AuriaListenerActionMetadata";
-import { SystemUser } from "../../../../../security/SystemUser";
+import { AuriaActionMetadata } from "../../../../../../default/module/listener/AuriaListenerActionMetadata.js";
+import { SystemUser } from "../../../../../security/user/SystemUser.js";
+
+
 
 export const LoginActionMetadata : AuriaActionMetadata = {
     DISABLE_BLACKLIST_RULE : true,

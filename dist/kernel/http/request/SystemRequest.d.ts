@@ -3,14 +3,6 @@ import { RequestStack } from '../../RequestStack';
 import { ServerRequest } from './ServerRequest';
 export interface SystemRequest extends ServerRequest {
     /**
-     * [GET] System
-     * -------------
-     *
-     * Return the requested system object
-     *
-     */
-    getSystem: () => System;
-    /**
      * [GET] System Name
      * -----------------
      *

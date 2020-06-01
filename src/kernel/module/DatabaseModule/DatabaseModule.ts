@@ -1,12 +1,14 @@
-import { Module, TranslationsByLang } from "../Module";
-import { System } from "../../System";
-import { ModuleRowData } from "../ModuleRowData";
-import { ModuleListenerRowData } from "./ModuleListenerRowData";
-import { ModuleManager } from "../ModuleManager";
-import { Languages } from "../../i18n/Translator";
+import { Module, TranslationsByLang } from "../Module.js";
+import { ModuleRowData } from "../ModuleRowData.js";
+import { ModuleInterface, ModuleInterfaceDescription } from "../interface/ModuleInterface.js";
+import { System } from "../../System.js";
+import { ModuleMenu } from "../interface/ModuleMenu.js";
+import { ModulePage } from "../interface/ModulePage.js";
+import { ModuleMenuResourceDefinition as ModuleMenuD } from "../../resource/systemSchema/moduleMenu/ModuleMenuResourceDefinition.js";
+import { ModulePageResourceDefinition as ModulePageD } from "../../resource/systemSchema/modulePage/ModulePageResourceDefinition.js";
+import { Languages } from "../../i18n/Translator.js";
 
 export class DatabaseModule extends Module {
-
 
     /**
      * Populate a Module with information coming from the database
@@ -32,41 +34,78 @@ export class DatabaseModule extends Module {
      */
     protected rowInfo: ModuleRowData;
 
+    protected id: number;
+
+    protected interface: ModuleInterface;
+
+    protected loadInterfacePromise: Promise<ModuleInterfaceDescription>;
+
     constructor(system: System, name: string) {
         super(system, name);
         this.name = name;
 
         this.fetchGlobalListeners();
+
+        this.loadInterface();
+    }
+
+
+    protected async loadInterface(): Promise<ModuleInterfaceDescription> {
+        if (this.loadInterfacePromise == null) {
+
+            this.loadInterfacePromise =
+                Promise.resolve()
+                    .then(_ => this.loadInterfaceRootMenus())
+                    .then(_ => this.loadInterfaceRootPages())
+                    .then(_ => this.interface.getInterfaceDescription());
+        }
+
+        return this.loadInterfacePromise;
+    }
+
+    private async loadInterfaceRootMenus() {
+        return this.system.getSystemConnection()
+            .select("*")
+            .from(ModuleMenuD.tableName)
+            .where("module_id", this.id)
+            .where("parent_menu_id", null)
+            .then(async (menus) => {
+                for (var a = 0; a < menus.length; a++) {
+                    let menuInfo = menus[a];
+                    let menu = ModuleMenu.fromDescription(this, menuInfo);
+                    await menu.loadItensFromId(menuInfo[ModuleMenuD.columns.ID.columnName]);
+                    this.interface.addItem(menu);
+                }
+            });
+    }
+
+    private async loadInterfaceRootPages() {
+        return this.system.getSystemConnection()
+            .select("*")
+            .from(ModulePageD.tableName)
+            .where("module_id", this.id)
+            .where("parent_menu", null)
+            .then(async (pages) => {
+                for (var a = 0; a < pages.length; a++) {
+                    let pageInfo = pages[a];
+                    let page = ModulePage.fromDescription(this, pageInfo);
+                    this.interface.addItem(page);
+                }
+            });
     }
 
     protected fetchGlobalListeners() {
 
-        let conn = this.system.getSystemConnection();
-
-        conn
-            .select("name", "title", "description")
-            .from("module_listener")
-            .where("module_name", this.name)
-            .andWhere("active", 1)
-            .then((res) => {
-                (res as ModuleListenerRowData[]).forEach((listInfo) => {
-                    let list = ModuleManager.getGlobalListener(this, listInfo.name);
-                    console.log("[Database Module] Loading Global Listener: ", list.constructor.name);
-                    this.addListener(list);
-                });
-            })
-            .catch((err) => {
-                console.error("[Database Module] SQL Query Error:\n \
-            Failed to fetch global module listeners to module ", this.name);
-            });
+      
 
     }
 
 
-    public setRowInfo(info: ModuleRowData): DatabaseModule {
+    public initializeWithDbInfo(info: ModuleRowData): DatabaseModule {
 
         this.rowInfo = info;
         DatabaseModule.setRowInfoToModule(this, info);
+        this.id = info._id;
         return this;
     }
 
@@ -81,8 +120,8 @@ export class DatabaseModule extends Module {
 
     public mergeWithCodedModule(module: Module) {
         // # - Apply listeners
-        this.listeners.forEach((list) => {
-            module.addListener(list);
+        this.moduleListeners.forEach((list) => {
+            module.addModuleListener(list);
         });
 
         // # - Apply Properties

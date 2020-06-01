@@ -1,11 +1,14 @@
-import { SystemAuthenticator, SystemAuthenticationCredentials } from "./SystemAuthenticator";
-import { SystemRequest } from "../../http/request/SystemRequest";
-import { SystemUser } from "../SystemUser";
-import { AuthenticationError } from "../../../system/AuriaCore/exceptions/authentication/AuthenticationError";
+import { nanoid } from 'nanoid';
 
-import * as bcrypt from 'bcrypt';
-import * as jwt from 'jsonwebtoken';
-import { UserNotLoggedIn } from "../../exceptions/kernel/UserNotLoggedIn";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { SystemAuthenticator, SystemAuthenticationCredentials } from './SystemAuthenticator.js';
+import { SystemUser } from '../user/SystemUser.js';
+import { SystemRequest } from '../../http/request/SystemRequest.js';
+import { ExpiredToken } from '../../exceptions/kernel/ExpiredToken.js';
+import { UserResourceDefinition } from '../../resource/systemSchema/user/UserResourceDefinition.js';
+import { UserNotLoggedIn } from '../../exceptions/kernel/UserNotLoggedIn.js';
+import { AuthenticationFailed } from '../../exceptions/kernel/AuthenticationFailed.js';
 
 export abstract class PasswordAutheticator extends SystemAuthenticator {
 
@@ -33,6 +36,9 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
                 if (tokenSystem == this.system.name) {
                     if (this.system.isUserLoggedIn(tokenUsername)) {
                         systemUser = this.system.getUser(tokenUsername)!;
+                        if (!systemUser.accessTokenMatch(token)) {
+                            throw new ExpiredToken("The token used is no longer associated with the user!");
+                        }
                         console.log("[PasswordAuthenticator] Request Token is valid and user is logged into the system!");
                     } else {
                         console.log("[PasswordAuthenticator] Request Token is valid and user is NOT logged into the system!");
@@ -75,6 +81,30 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
         return token;
     }
 
+    public generateSessionToken(user: SystemUser): string {
+        const uniqueSessionIdentifier = nanoid();
+
+        let sessionInfo = {
+            machine_ip: user.getIp(),
+            user_agent: user.getUserAgent(),
+            loginTime: Date.now(),
+            systemVersion: this.system.getSystemVersion(),
+            targetedSystem: this.system.name,
+            username: user.getUsername(),
+            session_id: uniqueSessionIdentifier
+        };
+
+        let token = jwt.sign(
+            sessionInfo,
+            this.getJwtSecret(),
+            {
+                expiresIn: '30 days'
+            }
+        );
+
+        return token;
+    }
+
     public validateToken(jwtToken: string): ValidateTokenInfo {
         try {
             let jwtDecipher: SystemUserAuthInfo;
@@ -97,14 +127,19 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
         let conn = this.system.getSystemConnection();
 
         return conn
-            .select("_id", "password", "user_type")
-            .from("users")
-            .where("username", credentials.username)
+            .select(
+                UserResourceDefinition.columns.ID.columnName,
+                UserResourceDefinition.columns.Password.columnName,
+                UserResourceDefinition.columns.UserPrivilege.columnName
+            )
+            .from(UserResourceDefinition.tableName)
+            .where(UserResourceDefinition.columns.Username.columnName, credentials.username)
             .then(
                 async (results: QueryResultUserLoginWithPassword[]) => {
 
                     if (results.length != 1) {
-                        throw new AuthenticationError("Failed to authenticate user in this system!");
+                        if (results.length > 1) console.error("[PasswordAuthenticator] WARNING dupped username in User Table! Authentication will fail!");
+                        throw new AuthenticationFailed("Failed to authenticate user in this system!");
                     }
 
                     let userInfo = results[0];
@@ -115,7 +150,7 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
                             userType: userInfo.user_type
                         };
                     } else {
-                        throw new AuthenticationError("Failed to authenticate user in this system!");
+                        throw new AuthenticationFailed("Failed to authenticate user in this system!");
                     }
                 }
             );

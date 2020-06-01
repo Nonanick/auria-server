@@ -1,6 +1,2 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-class ResponseSerializer {
+export class ResponseSerializer {
 }
-exports.ResponseSerializer = ResponseSerializer;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiUmVzcG9uc2VTZXJpYWxpemVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vLi4vc3JjL2tlcm5lbC9odHRwL3Jlc3BvbnNlL1Jlc3BvbnNlU2VyaWFsaXplci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOztBQUFBLE1BQWEsa0JBQWtCO0NBRTlCO0FBRkQsZ0RBRUMifQ==

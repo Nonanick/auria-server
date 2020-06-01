@@ -1,6 +1,6 @@
-import { SystemAuthenticator, SystemAuthenticationCredentials } from "./SystemAuthenticator";
-import { SystemRequest } from "../../http/request/SystemRequest";
-import { SystemUser } from "../SystemUser";
+import { SystemAuthenticator, SystemAuthenticationCredentials } from './SystemAuthenticator.js';
+import { SystemUser } from '../user/SystemUser.js';
+import { SystemRequest } from '../../http/request/SystemRequest.js';
 export declare abstract class PasswordAutheticator extends SystemAuthenticator {
     static AUTHENTICATOR_JWT_HEADER_NAME: string;
     isAuthenticated(user: SystemUser): Promise<boolean>;
@@ -12,6 +12,7 @@ export declare abstract class PasswordAutheticator extends SystemAuthenticator {
      * @param user
      */
     generateAuthenticationToken(user: SystemUser): string;
+    generateSessionToken(user: SystemUser): string;
     validateToken(jwtToken: string): ValidateTokenInfo;
     authenticate(credentials: SystemAuthenticationCredentials): Promise<SystemLoginAuthDetails>;
     protected abstract getJwtSecret(): string;

@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,9 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = require("fs");
-class Logger {
+import { promises as fs } from 'fs';
+export class Logger {
     constructor(file) {
         this.enableDebug = true;
         this.logFile = file;
@@ -18,7 +16,7 @@ class Logger {
     log(...symbols) {
         return __awaiter(this, void 0, void 0, function* () {
             let fString = "[LOG] - " + symbols.join(" ") + "\n";
-            return fs_1.promises.appendFile(this.logFile, fString);
+            return fs.appendFile(this.logFile, fString);
         });
     }
     debug(...symbols) {
@@ -26,15 +24,13 @@ class Logger {
             if (!this.enableDebug)
                 return;
             let fString = "[DBG] - " + symbols.join(" ") + "\n";
-            return fs_1.promises.appendFile(this.logFile, fString);
+            return fs.appendFile(this.logFile, fString);
         });
     }
     error(...symbols) {
         return __awaiter(this, void 0, void 0, function* () {
             let fString = "[ERR] - " + symbols.join(" ") + "\n";
-            return fs_1.promises.appendFile(this.logFile, fString);
+            return fs.appendFile(this.logFile, fString);
         });
     }
 }
-exports.Logger = Logger;
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiTG9nZ2VyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vLi4vc3JjL2tlcm5lbC9sb2dnZXIvTG9nZ2VyLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7O0FBQUEsMkJBQW9DO0FBRXBDLE1BQWEsTUFBTTtJQU1mLFlBQVksSUFBWTtRQUpqQixnQkFBVyxHQUFHLElBQUksQ0FBQztRQU10QixJQUFJLENBQUMsT0FBTyxHQUFHLElBQUksQ0FBQztJQUV4QixDQUFDO0lBRVksR0FBRyxDQUFDLEdBQUcsT0FBYzs7WUFDOUIsSUFBSSxPQUFPLEdBQUcsVUFBVSxHQUFHLE9BQU8sQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLEdBQUcsSUFBSSxDQUFDO1lBQ3BELE9BQU8sYUFBRSxDQUFDLFVBQVUsQ0FBQyxJQUFJLENBQUMsT0FBTyxFQUFFLE9BQU8sQ0FBQyxDQUFDO1FBQ2hELENBQUM7S0FBQTtJQUVZLEtBQUssQ0FBQyxHQUFHLE9BQWM7O1lBQ2hDLElBQUksQ0FBQyxJQUFJLENBQUMsV0FBVztnQkFDakIsT0FBTztZQUVYLElBQUksT0FBTyxHQUFHLFVBQVUsR0FBRyxPQUFPLENBQUMsSUFBSSxDQUFDLEdBQUcsQ0FBQyxHQUFHLElBQUksQ0FBQztZQUNwRCxPQUFPLGFBQUUsQ0FBQyxVQUFVLENBQUMsSUFBSSxDQUFDLE9BQU8sRUFBRSxPQUFPLENBQUMsQ0FBQztRQUNoRCxDQUFDO0tBQUE7SUFFWSxLQUFLLENBQUMsR0FBRyxPQUFjOztZQUNoQyxJQUFJLE9BQU8sR0FBRyxVQUFVLEdBQUcsT0FBTyxDQUFDLElBQUksQ0FBQyxHQUFHLENBQUMsR0FBRyxJQUFJLENBQUM7WUFDcEQsT0FBTyxhQUFFLENBQUMsVUFBVSxDQUFDLElBQUksQ0FBQyxPQUFPLEVBQUUsT0FBTyxDQUFDLENBQUM7UUFDaEQsQ0FBQztLQUFBO0NBRUo7QUE5QkQsd0JBOEJDIn0=

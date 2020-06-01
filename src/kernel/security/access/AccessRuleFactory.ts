@@ -1,4 +1,5 @@
-import { ResourceAccessRuleList, ResourceIdentification } from "./ResourceAccessRuleList";
-import { ActionMetadata } from "../../module/ListenerAction";
+import { ResourceIdentification, ResourceAccessRuleList } from "./ResourceAccessRuleList.js";
+import { ActionMetadata } from "../../module/api/ListenerAction.js";
 
-export type AccessRuleFactory = (resourceDefinition: ResourceIdentification, accessRuleDefinition : ActionMetadata) => ResourceAccessRuleList;
+export type AccessRuleFactory =
+    (resourceDefinition: ResourceIdentification, accessRuleDefinition: ActionMetadata) => ResourceAccessRuleList;

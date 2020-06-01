@@ -1,7 +1,8 @@
-import { System } from "../System";
-import { Module } from "./Module";
-import { ModuleListener } from "./ModuleListener";
-export declare class ModuleManager {
+import { Module } from "./Module.js";
+import { ModuleListener } from "./api/ModuleListener.js";
+import { System } from "../System.js";
+import { Bootable } from "aurialib2";
+export declare class ModuleManager implements Bootable {
     static getGlobalListener(module: Module, name: string): ModuleListener;
     /**
      * System
@@ -14,9 +15,10 @@ export declare class ModuleManager {
      */
     protected modules: Map<string, Module>;
     constructor(system: System);
+    getBootFunction(): (() => Promise<boolean>) | (() => boolean);
     hasModule(moduleName: string): boolean;
     addModule(...modules: Module[]): void;
     getModule(moduleName: string): Module | undefined;
     getAllModules(): Module[];
-    loadModulesFromDatabase(): void;
+    loadModulesFromDatabase(): Promise<boolean>;
 }

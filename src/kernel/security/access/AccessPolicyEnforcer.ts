@@ -1,13 +1,13 @@
-import { SystemUser } from "../SystemUser";
-import { SystemRequest } from "../../http/request/SystemRequest";
-import { System } from "../../System";
-import { ResourceAccessRuleList, ResourceIdentification } from "./ResourceAccessRuleList";
-import { Module } from "../../module/Module";
-import { AccessRuleFactory } from "./AccessRuleFactory";
-import { ModuleListener } from "../../module/ModuleListener";
-import { ActionMetadata } from "../../module/ListenerAction";
-import { AccessRuleContext } from "./AccessRule";
 import { EventEmitter } from 'events';
+import { ResourceAccessRuleList, ResourceIdentification } from './ResourceAccessRuleList.js';
+import { SystemUser } from '../user/SystemUser.js';
+import { AccessRuleContext } from './AccessRule.js';
+import { AccessRuleFactory } from './AccessRuleFactory.js';
+import { System } from '../../System.js';
+import { ActionMetadata } from '../../module/api/ListenerAction.js';
+import { Module } from '../../module/Module.js';
+import { ModuleListener } from '../../module/api/ModuleListener.js';
+import { SystemRequest } from '../../http/request/SystemRequest.js';
 
 export class AccessPolicyEnforcer extends EventEmitter {
 
@@ -61,7 +61,7 @@ export class AccessPolicyEnforcer extends EventEmitter {
     }
 
     protected loadRulesFromListenerResources(listener: ModuleListener) {
-        let actionsMetadata = listener.getExposedActionsMetadata();
+        let actionsMetadata = listener.getMetadataFromExposedActions();
 
         console.log("[AccessPolicy] Listener ", listener.name, " exposed the following actions: ", actionsMetadata);
 
@@ -88,14 +88,19 @@ export class AccessPolicyEnforcer extends EventEmitter {
 
     public async authorize(user: SystemUser, request: SystemRequest): Promise<boolean> {
 
+        const params = Object.assign({}, request.body, request.query, request.params);
+
         let context: AccessRuleContext = {
+            system : this.system,
             requestStack: request.getRequestStack(),
-            user: user
+            user: user,
+            params : params
         };
+    
         let stack = request.getRequestStack();
         let stackResourceName = (stack.module() + "." + stack.listener() + "." + stack.action()).trim().toLowerCase();
 
-        console.log("[APE] WIll apply rules on context!", this.apiResourceRules);
+        console.log("[APE] WIll apply rules on context!", this.apiResourceRules.get(stackResourceName));
 
         if (this.apiResourceRules.has(stackResourceName)) {
 
@@ -108,8 +113,7 @@ export class AccessPolicyEnforcer extends EventEmitter {
         } else {
             console.error(
                 "[APE] Failed to locate resource rule list for stack ",
-                "'" + stackResourceName + "' ",
-                this.apiResourceRules
+                "'" + stackResourceName + "' "
             );
             return false;
         }

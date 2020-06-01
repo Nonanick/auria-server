@@ -1,5 +1,5 @@
-import { ModuleListener } from "../../module/ModuleListener";
-import { ModuleRequest } from "./ModuleRequest";
+import { ModuleRequest } from "./ModuleRequest.js";
+import { ModuleListener } from "../../module/api/ModuleListener.js";
 export interface ListenerRequest extends ModuleRequest {
     getTranslations(lang: string): {
         [translationKey: string]: string;

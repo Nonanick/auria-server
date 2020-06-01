@@ -4,14 +4,6 @@ import { ServerRequest } from './ServerRequest';
 
 export interface SystemRequest extends ServerRequest {
 
-    /**
-     * [GET] System
-     * -------------
-     * 
-     * Return the requested system object
-     * 
-     */
-    getSystem: () => System;
 
     /**
      * [GET] System Name
@@ -61,7 +53,6 @@ export class SystemRequestFactory {
         (request, system, stack) => {
             let serverRequest: SystemRequest = Object.assign(
                 {
-                    getSystem: () => system,
                     getSystemName: () => system.name,
                     getRequestStack: () => stack
                 },

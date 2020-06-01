@@ -1,4 +1,7 @@
-import { SystemUser, UserRoleInformation } from "./SystemUser";
+import { UserRoleInformation } from "./user/UserRoleManager.js";
+import { SystemUser } from "./user/SystemUser.js";
+
+
 
 export class UserRole {
 

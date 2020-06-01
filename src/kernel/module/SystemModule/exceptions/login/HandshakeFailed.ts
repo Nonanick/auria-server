@@ -1,4 +1,5 @@
-import { AuriaException } from "../../../../exceptions/AuriaException";
+import { AuriaException } from "../../../../exceptions/AuriaException.js";
+
 
 export class HandshakeFailed extends AuriaException {
 
