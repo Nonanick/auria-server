@@ -22,6 +22,7 @@ import { UserResourceDefinition as User } from '../../../resource/systemSchema/u
 import { ModuleListener } from '../../api/ModuleListener.js';
 import { SystemUser } from '../../../security/user/SystemUser.js';
 import { HandshakeFailed } from '../exceptions/login/HandshakeFailed.js';
+import { SystemResponse } from '../../../http/response/SystemResponse.js';
 let LoginListener = /** @class */ (() => {
     class LoginListener extends ModuleListener {
         constructor(module) {
@@ -36,6 +37,10 @@ let LoginListener = /** @class */ (() => {
              *
              */
             this.login = (req) => __awaiter(this, void 0, void 0, function* () {
+                const loginResponse = new SystemResponse({
+                    requestStack: req.getRequestStack(),
+                    user: req.getUser()
+                });
                 const loginReq = req;
                 const username = req.getRequiredParam('username');
                 //# - Check if this login attempt is valid (max tries exceeded, etc...)
@@ -46,23 +51,25 @@ let LoginListener = /** @class */ (() => {
                     return this.
                         __checkLoginCredentials(loginReq, username, password)
                         .then(authDetails => this.__subscribeUserToSystem(loginReq, authDetails))
-                        .then(_ => this.__prepareLoginResponseHeaders(loginReq, username))
+                        .then(_ => this.__prepareLoginResponseHeaders(loginReq, loginResponse, username))
                         .then(_ => {
                         //Keep signed in?
                         if (loginReq.hasParam("keep-signed-in"))
-                            this.__saveUserSession(loginReq);
+                            this.__saveUserSession(loginReq, loginResponse);
                     })
                         .then(() => {
                         let user = req.getUser();
                         // Login successfull
                         currentAttempt.success = true;
                         let attempts = this.loginAttemptManager.clearLoginAttempts(loginReq);
-                        return {
+                        let data = {
                             message: "Login Successful!",
                             attempts: attempts,
                             username: user.getUsername(),
                             system: req.getRequestStack().system()
                         };
+                        loginResponse.addDataToResponse(data);
+                        return loginResponse;
                     })
                         .catch((err) => {
                         // Login failed
@@ -120,17 +127,21 @@ let LoginListener = /** @class */ (() => {
              * RefreshToken will expiry after a month after login!
              *
              */
-            this.__prepareLoginResponseHeaders = (req, username) => {
+            this.__prepareLoginResponseHeaders = (req, response, username) => {
                 // Send back authentication token
                 let token = req.getSystem().getAuthenticator().generateAuthenticationToken(req.getUser());
-                req.setCookie(LoginListener.COOKIE_USER_NAME, username, {
-                    maxAge: 1000 * 60 * 60 * 24 * 30,
-                    httpOnly: false,
-                    sameSite: "strict",
-                    secure: true
+                response.addCookie({
+                    name: LoginListener.COOKIE_USER_NAME,
+                    value: username,
+                    options: {
+                        maxAge: 1000 * 60 * 60 * 24 * 30,
+                        httpOnly: false,
+                        sameSite: "strict",
+                        secure: true
+                    }
                 });
                 req.getUser().setAccessToken(token);
-                req.setHeader(PasswordAutheticator.AUTHENTICATOR_JWT_HEADER_NAME, token);
+                response.addHeader(PasswordAutheticator.AUTHENTICATOR_JWT_HEADER_NAME, token);
             };
             /**
              * Save User Session
@@ -141,7 +152,7 @@ let LoginListener = /** @class */ (() => {
              * When the API need to retrieve an Access Token this method is accessed out of the SPA
              * context so the httpOnly Cookie can be passed along!
              */
-            this.__saveUserSession = (req) => {
+            this.__saveUserSession = (req, response) => {
                 let token = req.getSystem().getAuthenticator().generateSessionToken(req.getUser());
                 let sessionInfo = {
                     username: req.getUser().getUsername(),
@@ -152,10 +163,14 @@ let LoginListener = /** @class */ (() => {
                     client: 'node-server',
                     user_agent: req.getUser().getUserAgent()
                 };
-                req.setCookie(LoginListener.COOKIE_SESSION_TOKEN, token, {
-                    secure: true,
-                    sameSite: "strict",
-                    httpOnly: true
+                response.addCookie({
+                    name: LoginListener.COOKIE_SESSION_TOKEN,
+                    value: token,
+                    options: {
+                        secure: true,
+                        sameSite: "strict",
+                        httpOnly: true
+                    }
                 });
                 req.getSystem().getSystemConnection()
                     .insert(sessionInfo)
@@ -171,11 +186,15 @@ let LoginListener = /** @class */ (() => {
              * ----------------
              */
             this.logout = (req) => {
-                let loginReq = req;
+                const logoutResponse = new SystemResponse({
+                    requestStack: req.getRequestStack(),
+                    user: req.getUser(),
+                });
+                const loginReq = req;
                 let username = req.getUser().getUsername();
                 let cookie = req.getCookie(LoginListener.COOKIE_USER_NAME);
                 if (username == cookie) {
-                    this.__destroyAllCookies(loginReq);
+                    this.__destroyAllCookies(loginReq, logoutResponse);
                     loginReq.getSystem().getSystemConnection()
                         .update(Session.columns.Status.columnName, "inactive")
                         .from(Session.tableName)
@@ -193,27 +212,35 @@ let LoginListener = /** @class */ (() => {
                     throw new LogoutFailed("Server information does not match the request");
                 }
             };
-            this.__destroyAllCookies = (req) => {
+            this.__destroyAllCookies = (req, response) => {
                 let expiredDate = new Date();
                 expiredDate.setTime(0);
-                req.setCookie(LoginListener.COOKIE_USER_NAME, "", {
-                    expires: expiredDate
+                response.addCookie({
+                    name: LoginListener.COOKIE_USER_NAME, value: "", options: {
+                        expires: expiredDate
+                    }
                 });
-                req.setCookie(LoginListener.COOKIE_ACCESS_TOKEN, "", {
-                    expires: expiredDate
+                response.addCookie({
+                    name: LoginListener.COOKIE_ACCESS_TOKEN, value: "", options: {
+                        expires: expiredDate
+                    }
                 });
             };
             this.handshake = (req) => __awaiter(this, void 0, void 0, function* () {
                 console.log("[Handshake] Status: ", req.cookies[LoginListener.COOKIE_SESSION_TOKEN]);
                 const loginReq = req;
+                const handshakeResponse = new SystemResponse({
+                    requestStack: req.getRequestStack(),
+                    user: req.getUser(),
+                });
                 const sessionToken = req.cookies[LoginListener.COOKIE_SESSION_TOKEN];
                 const callbackURL = req.getParam("sendBack") == "" ? "/" : req.getParam("sendBack");
                 //# - Will ALWAYS redirect user, most requests are HTTP not XHR
-                loginReq.writeHeader("Location", callbackURL || '/');
-                loginReq.headerStatus(302);
+                handshakeResponse.addHeader("Location", callbackURL || '/');
+                handshakeResponse.setStatusCode(302);
                 // # - If there's no Session token, cleanup all tokens ans redirect
                 if (sessionToken == null) {
-                    this.__destroyAllCookies(loginReq);
+                    this.__destroyAllCookies(loginReq, handshakeResponse);
                     return false;
                 }
                 else {
@@ -225,7 +252,7 @@ let LoginListener = /** @class */ (() => {
                         this.__checkSessionSender(loginReq, info);
                     }
                     catch (err) {
-                        this.__destroyAllCookies(loginReq);
+                        this.__destroyAllCookies(loginReq, handshakeResponse);
                         throw new HandshakeFailed("Failed to verify token signature!");
                     }
                     console.log("[LoginListener] Handshake Token Info!", info);
@@ -255,7 +282,7 @@ let LoginListener = /** @class */ (() => {
                                 });
                             }
                             catch (err) {
-                                this.__destroyAllCookies(loginReq);
+                                this.__destroyAllCookies(loginReq, handshakeResponse);
                                 console.error("[LoginListener] Failed to retrieve information from user! Could not login from session handshake");
                                 throw new HandshakeFailed("Failed to login user into the system!");
                             }
@@ -263,10 +290,14 @@ let LoginListener = /** @class */ (() => {
                         let nToken = loginReq.getSystem().getAuthenticator().generateAuthenticationToken(req.getUser());
                         req.getUser().setAccessToken(nToken);
                         console.log("[LoginListener] Handshake suceeded! Will now generate token!", nToken);
-                        loginReq.setCookie(LoginListener.COOKIE_ACCESS_TOKEN, nToken, {
-                            secure: true,
-                            sameSite: true,
-                            httpOnly: false,
+                        handshakeResponse.addCookie({
+                            name: LoginListener.COOKIE_ACCESS_TOKEN,
+                            value: nToken,
+                            options: {
+                                secure: true,
+                                sameSite: true,
+                                httpOnly: false,
+                            }
                         });
                         return true;
                     }
@@ -353,3 +384,4 @@ let LoginListener = /** @class */ (() => {
     return LoginListener;
 })();
 export { LoginListener };
+//# sourceMappingURL=LoginListener.js.map

@@ -4,3 +4,4 @@ export class AuthenticationFailed extends AuriaException {
         return "SYS.LOGIN.AUTHENTICATION_FAILED";
     }
 }
+//# sourceMappingURL=AuthenticationFailed.js.map

@@ -16,3 +16,4 @@ let ModuleRequestFactory = /** @class */ (() => {
     return ModuleRequestFactory;
 })();
 export { ModuleRequestFactory };
+//# sourceMappingURL=ModuleRequest.js.map

@@ -147,7 +147,7 @@ export abstract class PasswordAutheticator extends SystemAuthenticator {
                         return {
                             id: userInfo._id,
                             username: credentials.username,
-                            userType: userInfo.user_type
+                            userType: userInfo.user_privilege
                         };
                     } else {
                         throw new AuthenticationFailed("Failed to authenticate user in this system!");
@@ -188,5 +188,5 @@ type ValidateTokenInfo = {
 type QueryResultUserLoginWithPassword = {
     _id: number;
     password: string;
-    user_type: number;
+    user_privilege: number;
 };

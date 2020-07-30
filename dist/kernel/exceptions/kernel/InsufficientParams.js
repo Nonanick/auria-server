@@ -12,3 +12,4 @@ let InsufficientParams = /** @class */ (() => {
     return InsufficientParams;
 })();
 export { InsufficientParams };
+//# sourceMappingURL=InsufficientParams.js.map

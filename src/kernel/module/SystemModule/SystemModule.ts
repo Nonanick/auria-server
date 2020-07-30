@@ -1,5 +1,4 @@
 
-import { Response } from "express-serve-static-core";
 import { Module, TranslationsByLang } from "../Module.js";
 import { LoginListener } from "./listeners/LoginListener.js";
 import { I18nListener } from "./listeners/I18nListener.js";
@@ -12,8 +11,6 @@ import { System } from "../../System.js";
 import { Languages, Translator } from "../../i18n/Translator.js";
 import { ModuleRequest } from "../../http/request/ModuleRequest.js";
 
-
-
 export class SystemModule extends Module {
 
     private __translations: TranslationsByLang = {};
@@ -22,6 +19,12 @@ export class SystemModule extends Module {
 
     constructor(system: System) {
         super(system, "System");
+
+        this.title = "System Module";
+        this.description = "Module that contains API access to core functions of the Auria System, including:";
+        this.icon = "system";
+        this.color = "";
+        
 
         this.loginListener = new LoginListener(this);
 
@@ -69,14 +72,14 @@ export class SystemModule extends Module {
         return translations;
     }
 
-    public handleRequest(request: ModuleRequest, response: Response) {
+    public handleRequest(request: ModuleRequest) {
 
         // Adds 'setCookie' and 'loginWithPassword' capabilities
         if (request.getRequestStack().listener() == this.loginListener.name
             || request.getRequestStack().listener() + "Listener" == this.loginListener.name) {
-            request = LoginRequestFactory.make(request, response, this.system);
+            request = LoginRequestFactory.make(request, this.system);
         }
-        return super.handleRequest(request, response);
+        return super.handleRequest(request);
     }
 
 

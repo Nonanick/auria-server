@@ -102,3 +102,4 @@ export var Languages;
     Languages["Spanish"] = "es";
 })(Languages || (Languages = {}));
 ;
+//# sourceMappingURL=Translator.js.map

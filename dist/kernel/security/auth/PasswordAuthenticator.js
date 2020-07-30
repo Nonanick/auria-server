@@ -122,7 +122,7 @@ let PasswordAutheticator = /** @class */ (() => {
                         return {
                             id: userInfo._id,
                             username: credentials.username,
-                            userType: userInfo.user_type
+                            userType: userInfo.user_privilege
                         };
                     }
                     else {
@@ -136,3 +136,4 @@ let PasswordAutheticator = /** @class */ (() => {
     return PasswordAutheticator;
 })();
 export { PasswordAutheticator };
+//# sourceMappingURL=PasswordAuthenticator.js.map

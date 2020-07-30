@@ -50,3 +50,4 @@ export class QueryFilter {
         return this;
     }
 }
+//# sourceMappingURL=QueryFilter.js.map

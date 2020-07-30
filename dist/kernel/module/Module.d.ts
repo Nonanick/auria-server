@@ -1,18 +1,22 @@
-/// <reference types="node" />
-import { EventEmitter } from 'events';
-import { Response } from "express-serve-static-core";
 import { ModuleInterface } from './interface/ModuleInterface.js';
 import { ModulePageDataRequirements, ModulePageActionRequirements } from './interface/requirements/ModulePageRequirements.js';
+import { ModulePage } from './interface/ModulePage.js';
 import { ModuleListener } from './api/ModuleListener.js';
 import { System } from '../System.js';
-import { SystemUser } from '../security/user/SystemUser.js';
-import { ModuleRequest } from '../http/request/ModuleRequest.js';
-export declare abstract class Module extends EventEmitter {
+import { ModuleRequest, ModuleRequestFactoryFunction } from '../http/request/ModuleRequest.js';
+import { ModuleBehaviour } from '../resource/systemSchema/module/ModuleResourceDefitinion.js';
+import { Module as LibModule, Bootable, BootSequence } from 'aurialib2';
+import { ModuleRowData } from "../resource/rowModel/ModuleRowData.js";
+export declare abstract class Module extends LibModule implements Bootable {
+    protected _id: number;
     protected _name: string;
     protected _title: string;
     protected _description: string;
     protected _color: string;
     protected _icon: string;
+    protected rowData: ModuleRowData;
+    protected rowDataPromise: Promise<ModuleRowData>;
+    protected _behaviour: ModuleBehaviour;
     /**
      * Name
      * -----
@@ -62,6 +66,8 @@ export declare abstract class Module extends EventEmitter {
      */
     get icon(): string;
     set icon(icon: string);
+    get behaviour(): ModuleBehaviour;
+    set behaviour(behaviour: ModuleBehaviour);
     protected interface: ModuleInterface;
     /**
      * System
@@ -77,7 +83,10 @@ export declare abstract class Module extends EventEmitter {
      * All the listeners assigned to this module
      */
     protected moduleListeners: Map<string, ModuleListener>;
+    protected moduleBoot: BootSequence;
     constructor(system: System, name: string);
+    getBootFunction(): (() => Promise<boolean>) | (() => boolean);
+    private saveModuleInDatabase;
     /**
      * Has Listener
      * -------------
@@ -116,7 +125,6 @@ export declare abstract class Module extends EventEmitter {
     getModuleDataPermissions(): {
         [tableName: string]: string[];
     };
-    getTable(user: SystemUser, table: string): void;
     /**
      * Get Data Requirements
      * ---------------------
@@ -126,6 +134,8 @@ export declare abstract class Module extends EventEmitter {
      *
      */
     getDataRequirements(): ModulePageDataRequirements;
+    private getRowData;
+    getId(): Promise<number>;
     /**
      * Get API Requirements
      * ---------------------
@@ -138,8 +148,22 @@ export declare abstract class Module extends EventEmitter {
     mergeModulePageDataRequirement(req1: ModulePageDataRequirements, req2: ModulePageDataRequirements): ModulePageDataRequirements;
     protected abstract loadTranslations(): TranslationsByLang;
     getTranslations(): TranslationsByLang;
-    handleRequest(request: ModuleRequest, response: Response): Promise<any>;
+    handleRequest(request: ModuleRequest): Promise<any>;
+    asJSON(options?: {
+        exclude?: string[];
+    }): ModuleJSON;
+    getPageWithId(pageId: number): ModulePage;
+    requestFactory: () => ModuleRequestFactoryFunction;
 }
+export declare type ModuleJSON = {
+    system: string;
+    name: string;
+    title: string;
+    description: string;
+    icon: string;
+    color: string;
+    behaviour: string;
+};
 export declare type TranslationsByLang = {
     [lang: string]: {
         [key: string]: string;

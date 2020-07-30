@@ -1,8 +1,11 @@
 import { Request } from "express-serve-static-core";
 
-export interface ServerRequest extends Request {
-
+export interface ServerRequest {
+    params: any;
+    headers: { [headerName: string]: string | string[] | undefined };
+    cookies: { [cookieName: string]: string | undefined }
     getRequiredParam: (...param: string[]) => any;
+    getOptionalParam: (param: string, defaultValue?: any) => any;
     getParam: (name: string) => any;
     hasParam: (name: string) => boolean;
     getIp: () => string;
@@ -13,9 +16,17 @@ export interface ServerRequest extends Request {
 
 export class ServerRequestFactory {
     public static promote(request: Request): ServerRequest {
-        let bodyData = Object.assign({}, request.body, request.query);
 
-        let serverReq: ServerRequest = Object.assign({
+        let bodyData = { ...request.body, ...request.query, ...request.params };
+
+        console.log("[BodyData]", bodyData);
+        let requestHeaders = { ...request.headers };
+        let requestCookies = { ...request.cookies };
+
+        let serverReq: ServerRequest = {
+            params: bodyData,
+            headers: requestHeaders,
+            cookies: requestCookies,
             //
             getRequiredParam: (...param: string[]) => {
                 let properAns: string | { [param: string]: string } = {};
@@ -34,6 +45,12 @@ export class ServerRequestFactory {
                 });
 
                 return properAns;
+            },
+            getOptionalParam: (name: string, defaultValue = null) => {
+                if (bodyData[name] === undefined)
+                    return defaultValue;
+
+                return bodyData[name];
             },
 
             //
@@ -68,7 +85,7 @@ export class ServerRequestFactory {
                 else
                     return "";
             }
-        }, request);
+        };
 
         return serverReq;
     }

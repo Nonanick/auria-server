@@ -4,3 +4,4 @@ export class HandshakeFailed extends AuriaException {
         return "000000100";
     }
 }
+//# sourceMappingURL=HandshakeFailed.js.map

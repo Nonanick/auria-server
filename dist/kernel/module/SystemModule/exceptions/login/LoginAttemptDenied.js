@@ -4,3 +4,4 @@ export class LoginAttemptDenied extends AuriaException {
         return "SYS.LOGIN.ATTEMPT.DENIED";
     }
 }
+//# sourceMappingURL=LoginAttemptDenied.js.map

@@ -88,15 +88,15 @@ export class AccessPolicyEnforcer extends EventEmitter {
 
     public async authorize(user: SystemUser, request: SystemRequest): Promise<boolean> {
 
-        const params = Object.assign({}, request.body, request.query, request.params);
+        const params = request.params;
 
         let context: AccessRuleContext = {
-            system : this.system,
+            system: this.system,
             requestStack: request.getRequestStack(),
             user: user,
-            params : params
+            params: params
         };
-    
+
         let stack = request.getRequestStack();
         let stackResourceName = (stack.module() + "." + stack.listener() + "." + stack.action()).trim().toLowerCase();
 

@@ -23,8 +23,8 @@ import { SystemRequestFactory } from "./http/request/SystemRequest.js";
 import { SystemModule } from "./module/SystemModule/SystemModule.js";
 import { UserNotLoggedIn } from "./exceptions/kernel/UserNotLoggedIn.js";
 import { ModuleUnavaliable } from "./exceptions/kernel/ModuleUnavaliable.js";
-import { ModuleRequestFactory } from "./http/request/ModuleRequest.js";
 import { Auria_ENV } from "../AuriaServer.js";
+import { SystemResponse } from "./http/response/SystemResponse.js";
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
 let System = /** @class */ (() => {
@@ -41,7 +41,7 @@ let System = /** @class */ (() => {
             this.loadedTranslations = {};
             console.info("[System] Creating new system: ", name);
             this.name = name;
-            this.boot = new BootSequence();
+            this._boot = new BootSequence();
             this.users = new Map();
             this.systemRequestFactory = new SystemRequestFactory();
             this.resourceManager = new ResourceManager(this);
@@ -50,21 +50,31 @@ let System = /** @class */ (() => {
             this.dataSteward = new ServerDataSteward(this.resourceManager);
             this.accessPolicyEnforcer = new AccessPolicyEnforcer(this);
             this.accessPolicyEnforcer.setAccessRuleFactory(this.getAccessRuleFactory());
-            this.boot.addBootable("ConnectionBoot", this.connectionManager);
-            this.boot.addBootable("ResourceBoot", this.resourceManager, {
+            this._boot.addBootable("ConnectionBoot", this.connectionManager);
+            this._boot.addBootable("ResourceBoot", this.resourceManager, {
                 dependencies: ["ConnectionBoot"]
             });
-            this.boot.addBootable("ModuleBoot", this.moduleManager, {
+            this._boot.addBootable("ModuleBoot", this.moduleManager, {
                 dependencies: ["ResourceBoot"]
             });
             // If ENV == "development", systemversion does not change!
             this.systemVersion = Auria_ENV == "development" ?
                 1 : Math.round(Math.random() * 1000000);
             console.log("[System] Initializing modules from system ", name);
-            this.boot.initialize();
             this.addModule(
             // # - System related functions
             new SystemModule(this));
+        }
+        boot() {
+            return __awaiter(this, void 0, void 0, function* () {
+                return this._boot.initialize();
+            });
+        }
+        getBootFunction() {
+            return () => __awaiter(this, void 0, void 0, function* () {
+                yield this.boot();
+                return true;
+            });
         }
         /**
          * Public access to this system modules instances
@@ -134,6 +144,13 @@ let System = /** @class */ (() => {
         getModule(moduleName) {
             return this.moduleManager.getModule(moduleName);
         }
+        getModuleById(id) {
+            return __awaiter(this, void 0, void 0, function* () {
+                return this._boot.onInitialize().then(_ => {
+                    return this.moduleManager.getModuleById(id);
+                });
+            });
+        }
         getAllModules() {
             return this.moduleManager.getAllModules();
         }
@@ -167,7 +184,7 @@ let System = /** @class */ (() => {
          * @param response Express **Response** object
          * @param next Express **NextFunction**
          */
-        handleRequest(request, response, next) {
+        handleRequest(request) {
             return __awaiter(this, void 0, void 0, function* () {
                 let user;
                 try {
@@ -187,10 +204,10 @@ let System = /** @class */ (() => {
                     throw new ModuleUnavaliable("The requested module does not exist in this system!");
                 }
                 let module = this.moduleManager.getModule(requestedModule);
-                let moduleRequest = ModuleRequestFactory.make(request, user, module);
-                let requestResponse = module.handleRequest(moduleRequest, response);
-                let resp = yield this.systemResponseFactory(requestResponse, response);
-                response.send(resp);
+                let reqFactory = module.requestFactory();
+                let moduleRequest = reqFactory(request, user, module);
+                let requestResponse = module.handleRequest(moduleRequest);
+                let resp = yield this.systemResponseFactory(requestResponse, moduleRequest);
                 return resp;
             });
         }
@@ -204,37 +221,42 @@ let System = /** @class */ (() => {
          * @param data
          * @param response
          */
-        systemResponseFactory(data, response) {
+        systemResponseFactory(data, request) {
             return __awaiter(this, void 0, void 0, function* () {
                 /**
                  * HTTP Response should be handled by the system itself and not the server!
                  *
-                 * Server is just a container for systems, an entrypoint
+                 * Server is just a container for systems, an entrypoint, but its the layer that connect to the http interface!
+                 *
                  */
                 if (data instanceof Promise) {
+                    console.log("[System] Response is a Promise, wait for it to resolve!");
                     return data
                         .then((ans) => {
-                        console.log("[Server] Response to request: ", ans);
-                        let srvResponse = {
-                            digest: "ok",
-                            error: "",
+                        if (ans instanceof SystemResponse)
+                            return ans;
+                        console.log("[System] Promise value is NOT a SystemResponse!", ans);
+                        let srvResponse = new SystemResponse({
+                            requestStack: request.getRequestStack(),
+                            user: request.getUser(),
                             exitCode: "SYSTEM.REQUEST.FINISHED",
-                            response: ans
-                        };
+                            data: ans
+                        });
                         return srvResponse;
                     }).catch((err) => {
                         let exc = err;
-                        return this.handleRequestException(exc, response);
+                        return this.handleRequestException(exc, request);
                     });
                 }
                 else {
-                    console.log("[Server] Response to request: ", data);
-                    let srvResponse = {
-                        digest: "ok",
-                        error: "",
+                    if (data instanceof SystemResponse)
+                        return data;
+                    let srvResponse = new SystemResponse({
+                        data,
+                        requestStack: request.getRequestStack(),
+                        user: request.getUser(),
                         exitCode: "SYSTEM.REQUEST.FINISHED",
-                        response: data
-                    };
+                    });
                     return srvResponse;
                 }
             });
@@ -253,15 +275,13 @@ let System = /** @class */ (() => {
          * @param exception
          * @param response
          */
-        handleRequestException(exception, response) {
+        handleRequestException(exception, request) {
             console.error("[Server] Failed to proccess request!", exception);
-            response.status(exception.getHttpCode());
-            let sendArgs = {
-                digest: "error",
-                exitCode: exception.getCode(),
-                error: exception.getCode(),
-                response: exception.getMessage()
-            };
+            let sendArgs = new SystemResponse({
+                requestStack: request.getRequestStack(),
+                user: request.getUser(),
+                exitCode: exception.getCode()
+            });
             return sendArgs;
         }
         /**
@@ -293,3 +313,4 @@ let System = /** @class */ (() => {
     return System;
 })();
 export { System };
+//# sourceMappingURL=System.js.map

@@ -1,5 +1,4 @@
 import { default as Knex } from "knex";
-import { Response, NextFunction } from "express-serve-static-core";
 import { AuriaAccessRuleFactory } from "./security/access/AuriaAccessRuleFactory.js";
 import { SystemConfig } from "./SystemConfig.js";
 import { AuriaSystemAuthenticator } from "./security/AuriaSystemAutheticator.js";
@@ -122,8 +121,8 @@ export class AuriaSystem extends System {
 
     }
 
-    public handleRequest(req: SystemRequest, res: Response, next: NextFunction) {
-        return super.handleRequest(req, res, next);
+    public handleRequest(req: SystemRequest) {
+        return super.handleRequest(req);
     }
     /**
      * Authenticate Request
@@ -198,5 +197,7 @@ export class AuriaSystem extends System {
 
         return sessionConsult;
     }
+
+    
 
 }

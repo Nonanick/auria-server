@@ -3,3 +3,4 @@ export class SystemAuthenticator {
         this.system = system;
     }
 }
+//# sourceMappingURL=SystemAuthenticator.js.map

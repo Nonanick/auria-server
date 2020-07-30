@@ -69,3 +69,4 @@ let MysqlConnection = /** @class */ (() => {
     return MysqlConnection;
 })();
 export { MysqlConnection };
+//# sourceMappingURL=MysqlConnection.js.map

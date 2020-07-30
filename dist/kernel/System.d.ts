@@ -1,7 +1,6 @@
 /// <reference types="node" />
-import { Response, NextFunction } from "express-serve-static-core";
 import { EventEmitter } from 'events';
-import { Authenticator, ServerResponse, BootSequence } from "aurialib2";
+import { Authenticator, BootSequence, Bootable } from "aurialib2";
 import Knex from "knex";
 import { SystemUser } from "./security/user/SystemUser.js";
 import { ModuleManager } from "./module/ModuleManager.js";
@@ -12,13 +11,15 @@ import { ConnectionManager } from "./connection/ConnectionManager.js";
 import { SystemRequestFactory, SystemRequest } from "./http/request/SystemRequest.js";
 import { Module } from "./module/Module.js";
 import { SystemAuthenticator } from "./security/auth/SystemAuthenticator.js";
+import { ModuleRequest } from "./http/request/ModuleRequest.js";
 import { AuriaException } from "./exceptions/AuriaException.js";
 import { ServerRequest } from "./http/request/ServerRequest.js";
 import { RequestStack } from "./RequestStack.js";
 import { AccessRuleFactory } from "./security/access/AccessRuleFactory.js";
+import { SystemResponse } from "./http/response/SystemResponse.js";
 export declare const DEFAULT_LANG = "en";
 export declare const DEFAULT_LANG_VARIATION = "us";
-export declare abstract class System extends EventEmitter {
+export declare abstract class System extends EventEmitter implements Bootable {
     static EVENT_SYSTEM_MODULE_ADDED: string;
     static EVENT_SYSTEM_RESOURCE_MODIFIED: string;
     /**
@@ -36,7 +37,7 @@ export declare abstract class System extends EventEmitter {
      *
      */
     protected systemVersion: number;
-    protected boot: BootSequence;
+    protected _boot: BootSequence;
     /**
      * System connection
      * ------------------
@@ -69,18 +70,19 @@ export declare abstract class System extends EventEmitter {
      * Checks if the user have permission to access the requested action!
      *
      * Each "<ListenerAction>" have its own "<AccessPolicy>" determined by their
-     * <ModuleListener> AccessPolicyEnforcer Traverse through each module gathering
+     * <ModuleListener>
+     * AccessPolicyEnforcer traverse through each module gathering
      * all of this Access Policies and applies them in each Request!
      */
     protected accessPolicyEnforcer: AccessPolicyEnforcer;
     protected resourceManager: ResourceManager;
     protected connectionManager: ConnectionManager;
     /**
-        * Module manager
-        *
-        * Hold all the modules from this system merging database parameters
-        * with coded parts of the module
-        */
+     * Module manager
+     *
+     * Hold all the modules from this system merging database parameters
+     * with coded parts of the module
+     */
     protected moduleManager: ModuleManager;
     /**
      * Translations
@@ -105,6 +107,8 @@ export declare abstract class System extends EventEmitter {
      */
     protected systemRequestFactory: SystemRequestFactory;
     constructor(name: string);
+    boot(): Promise<boolean>;
+    getBootFunction(): (() => Promise<boolean>) | (() => boolean);
     /**
      * Public access to this system modules instances
      */
@@ -160,6 +164,7 @@ export declare abstract class System extends EventEmitter {
      */
     addModule(...modules: Module[]): void;
     getModule(moduleName: string): Module | undefined;
+    getModuleById(id: number): Promise<Module>;
     getAllModules(): Module[];
     getConnectionManager(): ConnectionManager;
     getUser(username: string): SystemUser | null;
@@ -178,7 +183,7 @@ export declare abstract class System extends EventEmitter {
      * @param response Express **Response** object
      * @param next Express **NextFunction**
      */
-    handleRequest(request: SystemRequest, response: Response, next: NextFunction): Promise<ServerResponse>;
+    handleRequest(request: SystemRequest): Promise<SystemResponse>;
     /**
      * System Response Factory
      * ------------------------
@@ -189,7 +194,7 @@ export declare abstract class System extends EventEmitter {
      * @param data
      * @param response
      */
-    systemResponseFactory(data: any, response: Response): Promise<ServerResponse>;
+    systemResponseFactory(data: any, request: ModuleRequest): Promise<SystemResponse>;
     /**
      * Handle Request Exception
      * -------------------------
@@ -204,7 +209,7 @@ export declare abstract class System extends EventEmitter {
      * @param exception
      * @param response
      */
-    protected handleRequestException(exception: AuriaException, response: Response): ServerResponse;
+    protected handleRequestException(exception: AuriaException, request: ModuleRequest): SystemResponse;
     /**
      * Authenticate Request
      * ---------------------

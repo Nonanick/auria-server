@@ -3,9 +3,10 @@ import { Module } from '../../Module.js';
 import { AuriaListenerActionMetadata } from '../../../../default/module/listener/AuriaListenerActionMetadata.js';
 import { ModuleListener } from '../../api/ModuleListener.js';
 import { ListenerAction } from '../../api/ListenerAction.js';
+import { ModulePageRowData } from '../../../resource/rowModel/ModulePageRowData.js';
+import { ModuleMenuRowData } from '../../../resource/rowModel/ModuleMenuRowData.js';
 
 export class UserListener extends ModuleListener {
-
 
     constructor(module: Module) {
         super(module, "User");
@@ -18,7 +19,7 @@ export class UserListener extends ModuleListener {
                 DISABLE_WHITELIST_RULE: true,
                 accessRules: [GuestsCantAccessUserListener]
             },
-            "interfaceMapper": {
+            "interfaceMap": {
                 DISABLE_BLACKLIST_RULE: true,
                 DISABLE_WHITELIST_RULE: true,
                 accessRules: [GuestsCantAccessUserListener]
@@ -31,7 +32,16 @@ export class UserListener extends ModuleListener {
         return user.getUserInfo();
     };
 
-    public interfaceMapper: ListenerAction = async (req) => {
-        await req.getUser().getInterfaceMap().build();
+    public interfaceMap: ListenerAction = async (req) => {
+
+        let interfaceMap = await req.getUser().getInterfaceMap().asJSON();
+        return { ...interfaceMap };
+
     };
+
 }
+
+export type UserListenerInterfaceMap = {
+    pages: { [name: string]: ModulePageRowData },
+    menus: { [name: string]: (ModuleMenuRowData & UserListenerInterfaceMap) }
+};

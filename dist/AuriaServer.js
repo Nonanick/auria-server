@@ -8,12 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { ServerRequestFactory } from './kernel/http/request/ServerRequest.js';
+import { BootSequence } from 'aurialib2';
 import { AuriaSystem } from './default/AuriaSystem.js';
 import { RequestStack } from './kernel/RequestStack.js';
 import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable.js';
 import { AuriaException } from './kernel/exceptions/AuriaException.js';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
+import { ArchitectSystem } from './architect/ArchitecSystem.js';
 export const Auria_ENV = "development";
 export class AuriaServer {
     constructor(app) {
@@ -50,8 +52,8 @@ export class AuriaServer {
                 let system = this.systems.get(stack.system());
                 let systemRequest = system.promoteToSystemRequest(serverReq, stack);
                 // Sending the data through the Response object is a 'System' Responsability!
-                let systemResponse = yield system.handleRequest(systemRequest, res, next);
-                console.log("System Response to request: ", systemResponse);
+                let systemResponse = yield system.handleRequest(systemRequest);
+                this.sendSystemResponse(res, systemResponse);
             }
             catch (ex) {
                 if (ex instanceof AuriaException) {
@@ -68,6 +70,7 @@ export class AuriaServer {
         });
         console.log("\n[Auria Server] Initializing a new Auria server!");
         this.app = app;
+        this.boot = new BootSequence();
         this.systems = new Map();
         this.serverInstanceId = Math.round(Math.random() * 10000000);
         this.auriaBootInfo = {
@@ -75,9 +78,21 @@ export class AuriaServer {
             boot_timestamp: Date.now()
         };
         this.initializeExpressApp();
-        this.addSystem(
-        //new AuriaCoreSystem(),
-        new AuriaSystem("test"), new AuriaSystem("Paper"), new AuriaSystem("Architect"));
+        this.addSystem(new AuriaSystem("test"), new AuriaSystem("Paper"), new ArchitectSystem());
+    }
+    sendSystemResponse(response, systemResponse) {
+        let headers = systemResponse.getAllHeaders();
+        let cookies = systemResponse.getAllCookies();
+        let httpCode = systemResponse.getHttpStatusCode();
+        let ansJson = systemResponse.asJSON();
+        headers.forEach((headerInfo) => {
+            response.setHeader(headerInfo.name, headerInfo.value);
+        });
+        cookies.forEach((cookieInfo) => {
+            response.cookie(cookieInfo.name, cookieInfo.value, cookieInfo.options);
+        });
+        response.status(httpCode);
+        response.json(ansJson);
     }
     answerServerStatus(response) {
         let status = {
@@ -127,13 +142,14 @@ export class AuriaServer {
     addSystem(...system) {
         system.forEach((sys) => {
             this.systems.set(sys.name, sys);
+            this.boot.addBootable("[System]" + sys.name, sys);
         });
         return this;
     }
     run() {
         this.app.all(/.*/, this.requestHandler);
-        //@todo implement https server creation!
-        //this.app.listen(this.port);
+        this.boot.initialize();
         return this;
     }
 }
+//# sourceMappingURL=AuriaServer.js.map

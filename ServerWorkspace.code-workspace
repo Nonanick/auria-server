@@ -7,5 +7,25 @@
 			"path": "..\\auria-lib"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"sqltools.connections": [
+
+			{
+				"database": "auria",
+				"password": "",
+				"driver": "MariaDB",
+				"group": "Auria",
+				"mysqlOptions": {
+					"authProtocol": "default"
+				},
+				"name": "Auria System",
+				"port": 3306,
+				"previewLimit": 50,
+				"server": "localhost",
+				"username": "root"
+			}
+		],
+		"typescript.preferences.importModuleSpecifierEnding": "js",
+		"typescript.tsdk": "auria-server\\node_modules\\typescript\\lib"
+	}
 }

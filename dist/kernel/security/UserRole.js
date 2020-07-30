@@ -21,3 +21,4 @@ export class UserRole {
         return this;
     }
 }
+//# sourceMappingURL=UserRole.js.map

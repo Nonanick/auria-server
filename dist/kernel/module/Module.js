@@ -7,17 +7,26 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { EventEmitter } from 'events';
 import { ModuleInterface } from './interface/ModuleInterface.js';
+import { ModuleRequestFactory } from '../http/request/ModuleRequest.js';
 import { ListenerUnavaliable } from '../exceptions/kernel/ListenerUnavaliable.js';
 import { ListenerRequestFactory } from '../http/request/ListenerRequest.js';
-export class Module extends EventEmitter {
+import { ModuleResourceDefinition } from '../resource/systemSchema/module/ModuleResourceDefitinion.js';
+import { Module as LibModule, BootSequence } from 'aurialib2';
+import { ModuleRowDataMissing } from "../exceptions/kernel/module/ModuleRowDataMissing.js";
+export class Module extends LibModule {
     constructor(system, name) {
         super();
+        this._behaviour = "Coded";
+        this.requestFactory = () => {
+            return ModuleRequestFactory.make;
+        };
         this.system = system;
         this.name = name;
-        this.interface = new ModuleInterface(this);
         this.moduleListeners = new Map();
+        this.moduleBoot = new BootSequence();
+        this.interface = new ModuleInterface(this);
+        this.moduleBoot.addBootable("ModuleInterfaceBoot", this.interface);
     }
     /**
      * Name
@@ -93,6 +102,41 @@ export class Module extends EventEmitter {
         this.emit(ModuleEvents.ICON_CHANGED, icon);
         this._icon = icon;
     }
+    get behaviour() {
+        return this._behaviour;
+    }
+    set behaviour(behaviour) {
+        this._behaviour = behaviour;
+    }
+    getBootFunction() {
+        return () => __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield this.getRowData();
+            }
+            catch (err) {
+                if (err instanceof ModuleRowDataMissing) {
+                    yield this.saveModuleInDatabase();
+                    delete this.rowDataPromise;
+                }
+            }
+            yield this.moduleBoot.initialize();
+            return true;
+        });
+    }
+    saveModuleInDatabase() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let moduleRowData = this.asJSON();
+            return this.system.getSystemConnection()
+                .insert(moduleRowData)
+                .into(ModuleResourceDefinition.tableName)
+                .then((insertReturn) => {
+                console.log("[ModuleManager] Module register insert completed", insertReturn);
+            })
+                .catch((err) => {
+                console.error("[ModuleManger] Failed to register module into the database!", err);
+            });
+        });
+    }
     /**
      * Has Listener
      * -------------
@@ -163,9 +207,6 @@ export class Module extends EventEmitter {
         });
         return tablePermissions;
     }
-    getTable(user, table) {
-        throw new Error("Not immplemented yet!");
-    }
     /**
      * Get Data Requirements
      * ---------------------
@@ -183,6 +224,30 @@ export class Module extends EventEmitter {
             requirements = this.mergeModulePageDataRequirement(requirements, pageRequirements.data);
         });
         return requirements;
+    }
+    getRowData() {
+        if (this.rowDataPromise == null) {
+            this.rowDataPromise = this.system.getSystemConnection()
+                .select("*")
+                .from(ModuleResourceDefinition.tableName)
+                .where("name", this.name)
+                .where("system", this.system.name)
+                .then((rows) => {
+                if (rows.length == 1) {
+                    return rows[0];
+                }
+                else {
+                    console.error("[Module] Could not find module DB counterpart!");
+                    throw new ModuleRowDataMissing("[Module] This module does NOT contain a DB conterpart!");
+                }
+            });
+        }
+        return this.rowDataPromise;
+    }
+    getId() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.getRowData().then(data => data._id);
+        });
     }
     /**
      * Get API Requirements
@@ -261,7 +326,7 @@ export class Module extends EventEmitter {
         }
         return translations;
     }
-    handleRequest(request, response) {
+    handleRequest(request) {
         return __awaiter(this, void 0, void 0, function* () {
             let requestListener = request.getRequestStack().listener();
             let listener;
@@ -275,6 +340,27 @@ export class Module extends EventEmitter {
             return listener.handleRequest(listenerRequest);
         });
     }
+    asJSON(options) {
+        let ret = {
+            system: this.system.name,
+            behaviour: this.behaviour,
+            color: this.color,
+            description: this.description,
+            icon: this.icon,
+            name: this.name,
+            title: this.title,
+        };
+        if (options === null || options === void 0 ? void 0 : options.exclude) {
+            options.exclude.forEach((k) => {
+                ret[k] = "";
+            });
+        }
+        return ret;
+    }
+    getPageWithId(pageId) {
+        console.log("[Module] Get page with ID ", pageId, " on ", this.interface.getAllPages());
+        return this.interface.getAllPages()[pageId];
+    }
 }
 export var ModuleEvents;
 (function (ModuleEvents) {
@@ -284,3 +370,4 @@ export var ModuleEvents;
     ModuleEvents["ICON_CHANGED"] = "iconChanged";
     ModuleEvents["COLOR_CHANGED"] = "colorChanged";
 })(ModuleEvents || (ModuleEvents = {}));
+//# sourceMappingURL=Module.js.map

@@ -95,3 +95,4 @@ export class AuriaResponse {
         });
     }
 }
+//# sourceMappingURL=AuriaResponse.js.map

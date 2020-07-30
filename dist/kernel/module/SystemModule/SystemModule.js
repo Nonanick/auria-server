@@ -11,6 +11,10 @@ export class SystemModule extends Module {
     constructor(system) {
         super(system, "System");
         this.__translations = {};
+        this.title = "System Module";
+        this.description = "Module that contains API access to core functions of the Auria System, including:";
+        this.icon = "system";
+        this.color = "";
         this.loginListener = new LoginListener(this);
         this.addModuleListener(
         // Add translations capability
@@ -43,12 +47,13 @@ export class SystemModule extends Module {
         }
         return translations;
     }
-    handleRequest(request, response) {
+    handleRequest(request) {
         // Adds 'setCookie' and 'loginWithPassword' capabilities
         if (request.getRequestStack().listener() == this.loginListener.name
             || request.getRequestStack().listener() + "Listener" == this.loginListener.name) {
-            request = LoginRequestFactory.make(request, response, this.system);
+            request = LoginRequestFactory.make(request, this.system);
         }
-        return super.handleRequest(request, response);
+        return super.handleRequest(request);
     }
 }
+//# sourceMappingURL=SystemModule.js.map

@@ -5,3 +5,4 @@ export class MariaConnection extends MysqlConnection {
         this.driver = "maria";
     }
 }
+//# sourceMappingURL=MariaConnection.js.map

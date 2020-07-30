@@ -27,3 +27,4 @@ export class AuriaEventResponse extends EventEmitter {
             + "\n\n");
     }
 }
+//# sourceMappingURL=AuriaEventResponse.js.map

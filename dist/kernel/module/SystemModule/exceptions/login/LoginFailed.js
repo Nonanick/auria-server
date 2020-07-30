@@ -4,3 +4,4 @@ export class LoginFailed extends AuriaException {
         return "00000101";
     }
 }
+//# sourceMappingURL=LoginFailed.js.map

@@ -1,4 +1,3 @@
-import { Response } from "express-serve-static-core";
 import { Module, TranslationsByLang } from "../Module.js";
 import { System } from "../../System.js";
 import { ModuleRequest } from "../../http/request/ModuleRequest.js";
@@ -8,5 +7,5 @@ export declare class SystemModule extends Module {
     constructor(system: System);
     loadTranslations(): TranslationsByLang;
     getTranslations(): TranslationsByLang;
-    handleRequest(request: ModuleRequest, response: Response): Promise<any>;
+    handleRequest(request: ModuleRequest): Promise<any>;
 }

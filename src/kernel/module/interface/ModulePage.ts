@@ -1,32 +1,49 @@
-import { EventEmitter } from 'events';
 import { Module } from '../Module';
 import { ModulePageRequirements } from './requirements/ModulePageRequirements';
+import { ModulePage as LibPage } from 'aurialib2';
+import { ModuleMenu } from './ModuleMenu.js';
+import { ModuleInterfaceTreeBranch } from './ModuleInterface.js';
+import { ModulePageRowData } from '../../resource/rowModel/ModulePageRowData.js';
 
-export class ModulePage extends EventEmitter {
+export class ModulePage extends LibPage {
 
 
-    public static fromDescription(module : Module, description : ModuleInterfacePageDescription) : ModulePage {
+    public static fromDescription(module: Module, description: ModuleInterfacePageDescription): ModulePage {
 
         let page = new ModulePage(module);
-
+        page.id = description._id;
+        page.name = description.name;
+        page.description = description.description;
+        page.title = description.title;
+        page.icon = description.icon;
+        page.url = description.url;
+        page
 
         return page;
     }
+
+    protected _id: number;
 
     protected _name: string;
     protected _url: string;
     protected _icon: string;
     protected _title: string;
-    protected _display: string;
-    protected _displayConfig: any;
+    protected _engine: string;
+    protected _engineConfig: any;
 
     protected module: Module;
+
+    protected parentMenu: ModuleMenu;
 
     protected requirements: ModulePageRequirements;
 
     constructor(module: Module) {
-        super();
+        super(module.getInterface());
         this.module = module;
+    }
+
+    public setParent(parent: ModuleMenu) {
+        this.parentMenu = parent;
     }
 
     public get name(): string {
@@ -45,20 +62,20 @@ export class ModulePage extends EventEmitter {
         this._url = url;
     }
 
-    public get display(): string {
-        return this._display;
+    public get engine(): string {
+        return this._engine;
     }
 
-    public set display(display: string) {
-        this._display = display;
+    public set engine(display: string) {
+        this._engine = display;
     }
 
-    public get displayConfig(): any {
-        return this._displayConfig;
+    public get engineConfig(): any {
+        return this._engineConfig;
     }
 
-    public set displayConfig(config: any) {
-        this._displayConfig = config;
+    public set engineConfig(config: any) {
+        this._engineConfig = config;
     }
 
     public get title(): string {
@@ -77,27 +94,69 @@ export class ModulePage extends EventEmitter {
         this._icon = icon;
     }
 
+    public get id(): number {
+        return this._id;
+    }
+
+    public set id(id: number) {
+        this._id = id;
+    }
+
     public getRequirements(): ModulePageRequirements {
         return this.requirements;
     }
 
     public getInterfaceDescription(): ModuleInterfacePageDescription {
         return {
+            _id: this.id,
             name: this.name,
+            description: this.description,
             url: this.url,
             icon: this.icon,
             title: this.title,
-            display: this.display,
-            display_config: this.displayConfig
+            engine: this.engine,
+            engine_config: this.engineConfig
+        };
+    }
+
+    public async tree(): Promise<ModuleInterfaceTreeBranch> {
+        let isRoot = this.parentMenu == null;
+        let parent = isRoot ? undefined : await this.parentMenu.tree();
+
+        return {
+            name : this.name,
+            type : "Page",
+            root: isRoot,
+            parent: parent,
+            item: await this.asJSON()
+        };
+    }
+
+    public async asJSON(): Promise<ModulePageRowData> {
+        return {
+            _id: this.id,
+            api_requirements: this.apiRequirements,
+            data_requirements: this.dataRequirements,
+            description: this.description,
+            engine: this.engine,
+            icon: this.icon,
+            module_id: await this.module.getId(),
+            name: this.name,
+            title: this.title,
+            url: this.url,
+            module_binding: this.modelBinding,
+            resource_binding: this.collectionBinding
         };
     }
 }
 
 export type ModuleInterfacePageDescription = {
+    _id: number;
     name: string;
+    description: string;
     url: string;
     icon: string;
     title: string;
-    display: string;
-    display_config: any;
+    engine: string;
+    engine_config: any;
 };

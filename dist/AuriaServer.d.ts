@@ -1,6 +1,7 @@
 import { Express } from 'express-serve-static-core';
 import { System } from './kernel/System.js';
 import { AuriaServerBootInfo } from './server/AuriaServerBootInfo.js';
+import { BootSequence } from 'aurialib2';
 export declare type AuriaServerStatus = "online" | "offline" | "maintenance";
 export declare const Auria_ENV: "development" | "production ";
 export declare class AuriaServer {
@@ -32,6 +33,7 @@ export declare class AuriaServer {
      */
     private serverInstanceId;
     protected auriaBootInfo: AuriaServerBootInfo;
+    protected boot: BootSequence;
     /**
      * [HTTP Request Entry Point]
      * Request Handler
@@ -42,6 +44,7 @@ export declare class AuriaServer {
      *
      */
     private requestHandler;
+    private sendSystemResponse;
     private answerServerStatus;
     private handleRequestException;
     constructor(app: Express);

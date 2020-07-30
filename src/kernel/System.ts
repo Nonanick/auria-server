@@ -1,7 +1,6 @@
-import { Response, NextFunction } from "express-serve-static-core";
 import { EventEmitter } from 'events';
 // Default system modules
-import { Authenticator, ServerResponse, BootSequence } from "aurialib2";
+import { Authenticator, BootSequence, Bootable } from "aurialib2";
 // Params config import
 
 // Exceptions
@@ -19,16 +18,17 @@ import { Module } from "./module/Module.js";
 import { SystemAuthenticator } from "./security/auth/SystemAuthenticator.js";
 import { UserNotLoggedIn } from "./exceptions/kernel/UserNotLoggedIn.js";
 import { ModuleUnavaliable } from "./exceptions/kernel/ModuleUnavaliable.js";
-import { ModuleRequestFactory } from "./http/request/ModuleRequest.js";
+import { ModuleRequest } from "./http/request/ModuleRequest.js";
 import { AuriaException } from "./exceptions/AuriaException.js";
 import { ServerRequest } from "./http/request/ServerRequest.js";
 import { RequestStack } from "./RequestStack.js";
 import { AccessRuleFactory } from "./security/access/AccessRuleFactory.js";
 import { Auria_ENV } from "../AuriaServer.js";
+import { SystemResponse } from "./http/response/SystemResponse.js";
 export const DEFAULT_LANG = "en";
 export const DEFAULT_LANG_VARIATION = "us";
 
-export abstract class System extends EventEmitter {
+export abstract class System extends EventEmitter implements Bootable {
 
     public static EVENT_SYSTEM_MODULE_ADDED = "SystemModuleAdded";
 
@@ -52,7 +52,7 @@ export abstract class System extends EventEmitter {
      */
     protected systemVersion: number;
 
-    protected boot: BootSequence;
+    protected _boot: BootSequence;
 
     /**
      * System connection
@@ -89,7 +89,8 @@ export abstract class System extends EventEmitter {
      * Checks if the user have permission to access the requested action!
      * 
      * Each "<ListenerAction>" have its own "<AccessPolicy>" determined by their 
-     * <ModuleListener> AccessPolicyEnforcer Traverse through each module gathering
+     * <ModuleListener>  
+     * AccessPolicyEnforcer traverse through each module gathering
      * all of this Access Policies and applies them in each Request!
      */
     protected accessPolicyEnforcer: AccessPolicyEnforcer;
@@ -99,11 +100,11 @@ export abstract class System extends EventEmitter {
     protected connectionManager: ConnectionManager;
 
     /**
-        * Module manager
-        * 
-        * Hold all the modules from this system merging database parameters
-        * with coded parts of the module
-        */
+     * Module manager
+     * 
+     * Hold all the modules from this system merging database parameters
+     * with coded parts of the module
+     */
     protected moduleManager: ModuleManager;
 
     /**
@@ -134,9 +135,10 @@ export abstract class System extends EventEmitter {
         super();
 
         console.info("[System] Creating new system: ", name);
+
         this.name = name;
 
-        this.boot = new BootSequence();
+        this._boot = new BootSequence();
         this.users = new Map();
 
         this.systemRequestFactory = new SystemRequestFactory();
@@ -149,11 +151,11 @@ export abstract class System extends EventEmitter {
 
         this.accessPolicyEnforcer.setAccessRuleFactory(this.getAccessRuleFactory());
 
-        this.boot.addBootable("ConnectionBoot", this.connectionManager);
-        this.boot.addBootable("ResourceBoot", this.resourceManager, { 
-            dependencies: ["ConnectionBoot"] 
+        this._boot.addBootable("ConnectionBoot", this.connectionManager);
+        this._boot.addBootable("ResourceBoot", this.resourceManager, {
+            dependencies: ["ConnectionBoot"]
         });
-        this.boot.addBootable("ModuleBoot", this.moduleManager, {
+        this._boot.addBootable("ModuleBoot", this.moduleManager, {
             dependencies: ["ResourceBoot"]
         });
 
@@ -163,12 +165,21 @@ export abstract class System extends EventEmitter {
 
         console.log("[System] Initializing modules from system ", name);
 
-        this.boot.initialize();
-
         this.addModule(
             // # - System related functions
             new SystemModule(this)
         );
+    }
+
+    public async boot() {
+        return this._boot.initialize();
+    }
+
+    public getBootFunction(): (() => Promise<boolean>) | (() => boolean) {
+        return async () => {
+            await this.boot();
+            return true;
+        }
     }
 
     /**
@@ -265,6 +276,12 @@ export abstract class System extends EventEmitter {
         return this.moduleManager.getModule(moduleName);
     }
 
+    public async getModuleById(id: number): Promise<Module> {
+        return this._boot.onInitialize().then(_ => {
+            return this.moduleManager.getModuleById(id);
+        });
+    }
+
     public getAllModules(): Module[] {
         return this.moduleManager.getAllModules();
     }
@@ -302,7 +319,7 @@ export abstract class System extends EventEmitter {
      * @param response Express **Response** object
      * @param next Express **NextFunction**
      */
-    public async handleRequest(request: SystemRequest, response: Response, next: NextFunction) {
+    public async handleRequest(request: SystemRequest): Promise<SystemResponse> {
         let user: SystemUser;
 
         try {
@@ -326,12 +343,13 @@ export abstract class System extends EventEmitter {
         }
 
         let module: Module = this.moduleManager.getModule(requestedModule)!;
-        let moduleRequest = ModuleRequestFactory.make(request, user, module);
+        let reqFactory = module.requestFactory();
+        let moduleRequest = reqFactory(request, user, module);
 
-        let requestResponse = module.handleRequest(moduleRequest, response);
-        let resp = await this.systemResponseFactory(requestResponse, response);
+        let requestResponse = module.handleRequest(moduleRequest);
 
-        response.send(resp);
+        let resp = await this.systemResponseFactory(requestResponse, moduleRequest);
+
         return resp;
 
     }
@@ -346,36 +364,43 @@ export abstract class System extends EventEmitter {
      * @param data 
      * @param response 
      */
-    public async systemResponseFactory(data: any, response: Response): Promise<ServerResponse> {
+    public async systemResponseFactory(data: any, request: ModuleRequest): Promise<SystemResponse> {
 
         /**
          * HTTP Response should be handled by the system itself and not the server!
          * 
-         * Server is just a container for systems, an entrypoint
+         * Server is just a container for systems, an entrypoint, but its the layer that connect to the http interface!
+         * 
          */
         if (data instanceof Promise) {
+            console.log("[System] Response is a Promise, wait for it to resolve!");
             return data
                 .then((ans: any) => {
-                    console.log("[Server] Response to request: ", ans);
-                    let srvResponse: ServerResponse = {
-                        digest: "ok",
-                        error: "",
+                    if (ans instanceof SystemResponse) return ans;
+
+                    console.log("[System] Promise value is NOT a SystemResponse!", ans);
+
+                    let srvResponse: SystemResponse = new SystemResponse({
+                        requestStack: request.getRequestStack(),
+                        user: request.getUser(),
                         exitCode: "SYSTEM.REQUEST.FINISHED",
-                        response: ans
-                    };
+                        data: ans
+                    });
                     return srvResponse;
                 }).catch((err) => {
                     let exc = err as AuriaException;
-                    return this.handleRequestException(exc, response);
+                    return this.handleRequestException(exc, request);
                 });
         } else {
-            console.log("[Server] Response to request: ", data);
-            let srvResponse: ServerResponse = {
-                digest: "ok",
-                error: "",
+            if (data instanceof SystemResponse) return data;
+
+            let srvResponse: SystemResponse = new SystemResponse({
+                data,
+                requestStack: request.getRequestStack(),
+                user: request.getUser(),
                 exitCode: "SYSTEM.REQUEST.FINISHED",
-                response: data
-            };
+
+            });
             return srvResponse;
         }
     }
@@ -394,18 +419,15 @@ export abstract class System extends EventEmitter {
      * @param exception 
      * @param response 
      */
-    protected handleRequestException(exception: AuriaException, response: Response): ServerResponse {
+    protected handleRequestException(exception: AuriaException, request: ModuleRequest): SystemResponse {
 
         console.error("[Server] Failed to proccess request!", exception);
 
-        response.status(exception.getHttpCode());
-
-        let sendArgs: ServerResponse = {
-            digest: "error",
-            exitCode: exception.getCode(),
-            error: exception.getCode(),
-            response: exception.getMessage()
-        };
+        let sendArgs: SystemResponse = new SystemResponse({
+            requestStack: request.getRequestStack(),
+            user: request.getUser(),
+            exitCode: exception.getCode()
+        });
 
         return sendArgs;
     }

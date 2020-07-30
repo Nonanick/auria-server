@@ -34,3 +34,4 @@ export class Logger {
         });
     }
 }
+//# sourceMappingURL=Logger.js.map

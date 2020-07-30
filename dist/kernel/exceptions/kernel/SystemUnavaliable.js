@@ -12,3 +12,4 @@ let SystemUnavaliable = /** @class */ (() => {
     return SystemUnavaliable;
 })();
 export { SystemUnavaliable };
+//# sourceMappingURL=SystemUnavaliable.js.map

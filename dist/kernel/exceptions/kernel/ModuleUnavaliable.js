@@ -4,3 +4,4 @@ export class ModuleUnavaliable extends AuriaException {
         return "00002";
     }
 }
+//# sourceMappingURL=ModuleUnavaliable.js.map

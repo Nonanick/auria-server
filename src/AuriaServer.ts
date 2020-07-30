@@ -2,7 +2,7 @@ import { Express, Request, Response, NextFunction } from 'express-serve-static-c
 import { System } from './kernel/System.js';
 import { AuriaServerBootInfo } from './server/AuriaServerBootInfo.js';
 import { ServerRequest, ServerRequestFactory } from './kernel/http/request/ServerRequest.js';
-import { ServerResponse } from 'aurialib2';
+import { ServerResponse, BootSequence } from 'aurialib2';
 import { AuriaSystem } from './default/AuriaSystem.js';
 import { RequestStack } from './kernel/RequestStack.js';
 import { SystemUnavaliable } from './kernel/exceptions/kernel/SystemUnavaliable.js';
@@ -11,7 +11,8 @@ import { AuriaException } from './kernel/exceptions/AuriaException.js';
 
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
-
+import { SystemResponse } from './kernel/http/response/SystemResponse.js';
+import { ArchitectSystem } from './architect/ArchitecSystem.js';
 
 export type AuriaServerStatus = "online" | "offline" | "maintenance";
 
@@ -54,6 +55,8 @@ export class AuriaServer {
 
     protected auriaBootInfo: AuriaServerBootInfo;
 
+    protected boot: BootSequence;
+
 
     /**
      * [HTTP Request Entry Point]
@@ -67,7 +70,6 @@ export class AuriaServer {
     private requestHandler: (req: Request, res: Response, next: NextFunction) => Promise<void>
         = async (req, res, next) => {
             try {
-
                 let serverReq: ServerRequest = ServerRequestFactory.promote(req);
                 let stack: RequestStack = RequestStack.digestRequest(req);
 
@@ -85,9 +87,10 @@ export class AuriaServer {
                 let systemRequest: SystemRequest = system.promoteToSystemRequest(serverReq, stack);
 
                 // Sending the data through the Response object is a 'System' Responsability!
-                let systemResponse = await system.handleRequest(systemRequest, res, next);
+                let systemResponse: SystemResponse = await system.handleRequest(systemRequest);
 
-                console.log("System Response to request: ", systemResponse);
+                this.sendSystemResponse(res, systemResponse);
+
             }
             catch (ex) {
                 if (ex instanceof AuriaException) {
@@ -100,6 +103,24 @@ export class AuriaServer {
             }
         };
 
+    private sendSystemResponse(response: Response, systemResponse: SystemResponse) {
+        let headers = systemResponse.getAllHeaders();
+        let cookies = systemResponse.getAllCookies();
+        let httpCode = systemResponse.getHttpStatusCode();
+        let ansJson = systemResponse.asJSON();
+
+        headers.forEach((headerInfo) => {
+            response.setHeader(headerInfo.name, headerInfo.value);
+        });
+
+        cookies.forEach((cookieInfo) => {
+            response.cookie(cookieInfo.name, cookieInfo.value, cookieInfo.options);
+        });
+
+        response.status(httpCode);
+
+        response.json(ansJson);
+    }
     private answerServerStatus(response: Response) {
 
         let status: ServerResponse = {
@@ -138,6 +159,8 @@ export class AuriaServer {
         console.log("\n[Auria Server] Initializing a new Auria server!");
 
         this.app = app;
+        this.boot = new BootSequence();
+
         this.systems = new Map();
         this.serverInstanceId = Math.round(Math.random() * 10000000);
 
@@ -149,10 +172,9 @@ export class AuriaServer {
         this.initializeExpressApp();
 
         this.addSystem(
-            //new AuriaCoreSystem(),
             new AuriaSystem("test"),
             new AuriaSystem("Paper"),
-            new AuriaSystem("Architect")
+            new ArchitectSystem()
         );
 
     }
@@ -185,6 +207,7 @@ export class AuriaServer {
     public addSystem(...system: System[]): AuriaServer {
         system.forEach((sys) => {
             this.systems.set(sys.name, sys);
+            this.boot.addBootable("[System]" + sys.name, sys);
         });
         return this;
     }
@@ -193,8 +216,7 @@ export class AuriaServer {
 
         this.app.all(/.*/, this.requestHandler);
 
-        //@todo implement https server creation!
-        //this.app.listen(this.port);
+        this.boot.initialize();
 
         return this;
     }

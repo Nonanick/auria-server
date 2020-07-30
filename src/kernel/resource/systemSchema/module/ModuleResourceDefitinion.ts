@@ -35,12 +35,21 @@ export const ModuleResourceDefinition = asResource({
             sqlType: "VARCHAR",
             length: 255
         },
-
+        Behaviour : {
+            name : "Module Behaviour",
+            columnName : "behaviour",
+            sqlType : "VARCHAR",
+            length : 50
+        },
 
         Status: DefaultStatusColumnDefinition,
     },
     unique : {
         "UNIQUE_MODULE_IN_SYSTEM" : ["system","name"]
+    },
+    checkConstraints : {
+        "BEHAVIOUR_MUST_BE_KNOWN" : "behaviour = 'Coded' OR behaviour = 'Hybrid' OR behaviour = 'Database'"
     }
-
 });
+
+export type ModuleBehaviour = "Coded" | "Hybrid" | "Database";

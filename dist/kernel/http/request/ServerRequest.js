@@ -1,7 +1,13 @@
 export class ServerRequestFactory {
     static promote(request) {
-        let bodyData = Object.assign({}, request.body, request.query);
-        let serverReq = Object.assign({
+        let bodyData = Object.assign(Object.assign(Object.assign({}, request.body), request.query), request.params);
+        console.log("[BodyData]", bodyData);
+        let requestHeaders = Object.assign({}, request.headers);
+        let requestCookies = Object.assign({}, request.cookies);
+        let serverReq = {
+            params: bodyData,
+            headers: requestHeaders,
+            cookies: requestCookies,
             //
             getRequiredParam: (...param) => {
                 let properAns = {};
@@ -20,6 +26,11 @@ export class ServerRequestFactory {
                     }
                 });
                 return properAns;
+            },
+            getOptionalParam: (name, defaultValue = null) => {
+                if (bodyData[name] === undefined)
+                    return defaultValue;
+                return bodyData[name];
             },
             //
             getParam: (name) => {
@@ -50,7 +61,8 @@ export class ServerRequestFactory {
                 else
                     return "";
             }
-        }, request);
+        };
         return serverReq;
     }
 }
+//# sourceMappingURL=ServerRequest.js.map
